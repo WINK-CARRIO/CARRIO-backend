@@ -1,0 +1,51 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+from pydantic import BaseModel
+
+# 간단한 응답 스키마 (임시)
+class HealthCheck(BaseModel):
+    status: str
+    timestamp: datetime
+
+app = FastAPI(
+    title="자소서 에이전트 API",
+    description="기업 DNA 기반 자소서 생성 및 분석 서비스",
+    version="0.1.0"
+)
+
+# CORS 설정 (프론트엔드 개발용)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/", response_model=HealthCheck)
+def root():
+    """헬스 체크"""
+    return HealthCheck(
+        status="ok",
+        timestamp=datetime.now()
+    )
+
+@app.get("/health", response_model=HealthCheck)
+def health_check():
+    """헬스 체크"""
+    return HealthCheck(
+        status="ok",
+        timestamp=datetime.now()
+    )
+
+
+# TODO: 각 도메인 라우터 등록 (팀원들이 구현 후 추가)
+# from app.domains.users import routes as users_routes
+# from app.domains.companies import routes as companies_routes
+# from app.domains.cover_letters import routes as cover_letters_routes
+# from app.domains.agents import routes as agents_routes
+
+# app.include_router(users_routes.router, prefix="/api/v1")
+# app.include_router(companies_routes.router, prefix="/api/v1")
+# app.include_router(cover_letters_routes.router, prefix="/api/v1")
