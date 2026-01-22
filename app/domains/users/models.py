@@ -16,6 +16,7 @@ class User(Base):
     oauth_id = Column(String(255))
     role = Column(String(20), default="user")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True),server_default=func.now(),onupdate=func.now())
 
     spec = relationship("UserSpec", back_populates="user", uselist=False)
 

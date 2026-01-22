@@ -8,11 +8,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 회원가입 로직
 def hash_password(password: str) -> str:
-    print("PASSWORD VALUE:", password)
-    print("PASSWORD TYPE:", type(password))
-    print("PASSWORD LEN:", len(password))
-    print("PASSWORD BYTE LEN:", len(password.encode("utf-8")))
-
     return pwd_context.hash(password)
 
 
