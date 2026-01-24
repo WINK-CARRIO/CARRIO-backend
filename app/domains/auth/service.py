@@ -13,7 +13,17 @@ def hash_password(password: str) -> str:
 
 
 def create_user(db: Session, user_create: RegisterRequest) -> User:
+    # 해싱
     hashed_password = hash_password(user_create.password)
+
+    # 이메일 중복 방지 로직
+    existing_user = (
+        db.query(User)
+        .filter(User.email == user_create.email)
+        .first()
+    )
+    if existing_user:
+        raise ValueError("Email already registered")
 
     # 필드 매핑
     user = User(
