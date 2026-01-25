@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from app.domains.users.models import User
-from .exceptions import EmailAlreadyExistsError
+from .exceptions import EmailAlreadyExistsError, PasswordRequiredError, InvalidPasswordError
 from .schemas import RegisterRequest, UpdateMeRequest
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -65,15 +65,9 @@ def update_me(db: Session, user: User, body: UpdateMeRequest) -> User:
 def delete_me(db: Session, user: User, password: str | None):
     if user.oauth_provider == "email":
         if not password:
-            raise HTTPException(
-                status_code=400,
-                detail="비밀번호가 필요합니다",
-            )
+            raise PasswordRequiredError()
         if not verify_password(password, user.password_hash):
-            raise HTTPException(
-                status_code=401,
-                detail="비밀번호가 올바르지 않습니다",
-            )
+            raise InvalidPasswordError()
 
     db.delete(user)
     db.commit()

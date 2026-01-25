@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.shared.database import get_db
 from app.domains.users.models import User
 from app.domains.users.schemas import UserResponse
-from .exceptions import EmailAlreadyExistsError
+from .exceptions import EmailAlreadyExistsError, PasswordRequiredError, InvalidPasswordError
 from .kakao import get_kakao_user
 from .schemas import RegisterRequest, TokenResponse, UpdateMeRequest, DeleteMeRequest
 from .service import create_user, authenticate_user, update_me, delete_me, get_or_create_kakao_user
@@ -62,14 +62,24 @@ def update_my_info(
 ):
     return update_me(db, current_user, body)
 
-@router.delete("/me")
-def delete_my_account(
+@router.delete("/me", status_code=204)
+def delete_me_api(
         body: DeleteMeRequest,
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
 ):
-    delete_me(db, current_user, body.password)
-    return {"message": "회원 탈퇴가 완료되었습니다"}
+    try:
+        delete_me(db, current_user, body.password)
+    except PasswordRequiredError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="비밀번호가 필요합니다",
+        )
+    except InvalidPasswordError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="비밀번호가 올바르지 않습니다",
+        )
 
 @router.get("/kakao/login")
 def kakao_login():
