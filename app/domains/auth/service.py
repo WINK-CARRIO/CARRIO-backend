@@ -77,3 +77,30 @@ def delete_me(db: Session, user: User, password: str | None):
 
     db.delete(user)
     db.commit()
+
+# 카카오 유저 처리
+def get_or_create_kakao_user(db: Session, kakao_user: dict) -> User:
+    user = (
+        db.query(User)
+        .filter(
+            User.oauth_provider == "kakao",
+            User.oauth_id == kakao_user["oauth_id"]
+        )
+        .first()
+    )
+
+    if user:
+        return user
+
+    user = User(
+        email=kakao_user["email"],
+        name=kakao_user["name"],
+        oauth_provider="kakao",
+        oauth_id=kakao_user["oauth_id"],
+        role="user",
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

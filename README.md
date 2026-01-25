@@ -173,3 +173,18 @@ SECRET_KEY=your-secret-key-for-jwt
 서버 실행 후:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+## ✅ Kakao OAuth 설정
+
+### Redirect URI
+
+카카오 개발자 콘솔에 아래 Redirect URI를 등록해야 합니다.
+
+- Local:
+    - http://localhost:8000/api/v1/auth/kakao/callback
+
+- Production:
+    - https://api.example.com/api/v1/auth/kakao/callback
+
+⚠️ Redirect URI는 정확히 일치해야 하며,
+프론트엔드 로그인 요청 시에도 동일한 URI를 사용해야 합니다.

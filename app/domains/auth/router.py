@@ -6,10 +6,12 @@ from app.shared.database import get_db
 from app.domains.users.models import User
 from app.domains.users.schemas import UserResponse
 from .exceptions import EmailAlreadyExistsError
+from .kakao import get_kakao_user
 from .schemas import RegisterRequest, TokenResponse, UpdateMeRequest, DeleteMeRequest
-from .service import create_user, authenticate_user, update_me, delete_me
+from .service import create_user, authenticate_user, update_me, delete_me, get_or_create_kakao_user
 from .jwt import create_access_token
 from .dependencies import get_current_user
+from ...config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -21,7 +23,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     except EmailAlreadyExistsError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered"
+            detail="이미 있는 이메일 입니다"
         )
 
 
@@ -68,3 +70,30 @@ def delete_my_account(
 ):
     delete_me(db, current_user, body.password)
     return {"message": "회원 탈퇴가 완료되었습니다"}
+
+@router.get("/kakao/login")
+def kakao_login():
+    kakao_auth_url = (
+        "https://kauth.kakao.com/oauth/authorize"
+        "?response_type=code"
+        f"&client_id={settings.KAKAO_CLIENT_ID}"
+        f"&redirect_uri={settings.KAKAO_REDIRECT_URI}"
+    )
+    return {"url": kakao_auth_url}
+
+@router.get("/kakao/callback", response_model=TokenResponse)
+def kakao_callback(code: str, db: Session = Depends(get_db)):
+    kakao_user = get_kakao_user(code)
+    user = get_or_create_kakao_user(db, kakao_user)
+    access_token = create_access_token({"user_id": user.id})
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
+
+@router.post("/logout")
+def logout(current_user: User = Depends(get_current_user)):
+    return {
+        "message": "Logout successful. Please delete token on client."
+    }
