@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from app.domains.users.models import User
+from .exceptions import EmailAlreadyExistsError
 from .schemas import RegisterRequest, UpdateMeRequest
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -9,8 +10,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # 회원가입 로직
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
-
-
 
 def create_user(db: Session, user_create: RegisterRequest) -> User:
     # 해싱
@@ -23,7 +22,7 @@ def create_user(db: Session, user_create: RegisterRequest) -> User:
         .first()
     )
     if existing_user:
-        raise ValueError("Email already registered")
+        raise EmailAlreadyExistsError()
 
     # 필드 매핑
     user = User(
@@ -43,7 +42,6 @@ def create_user(db: Session, user_create: RegisterRequest) -> User:
 # 로그인 로직
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
-
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User | None:

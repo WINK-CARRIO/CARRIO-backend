@@ -1,4 +1,3 @@
-# app/domains/auth/router.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError
@@ -6,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.shared.database import get_db
 from app.domains.users.models import User
 from app.domains.users.schemas import UserResponse
+from .exceptions import EmailAlreadyExistsError
 from .schemas import RegisterRequest, TokenResponse, UpdateMeRequest, DeleteMeRequest
 from .service import create_user, authenticate_user, update_me, delete_me
 from .jwt import create_access_token
@@ -18,8 +18,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
     try:
         return create_user(db, body)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except EmailAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered"
+        )
 
 
 @router.post("/login", response_model=TokenResponse)
