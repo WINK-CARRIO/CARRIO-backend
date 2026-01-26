@@ -17,4 +17,4 @@ class UpdateMeRequest(BaseModel):
     name: Optional[str] = None
 
 class DeleteMeRequest(BaseModel):
-    password: str | None = None
+    password: Optional[str] = None

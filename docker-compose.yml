@@ -3,13 +3,13 @@ version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: coverletter-db
+    container_name: CARRIO-db
     env_file:
       - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-coverletter}
+      POSTGRES_DB: ${POSTGRES_DB:-CARRIO}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

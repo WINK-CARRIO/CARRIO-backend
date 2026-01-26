@@ -4,9 +4,11 @@ from datetime import datetime
 from pydantic import BaseModel
 from app.domains.users import router as users_routes
 from app.domains.auth import router as auth_routes
+from app.domains.companies import router as companies_routes
 from app.shared.database import Base, engine
 
-# Base.metadata.create_all(bind=engine)
+# 테이블 생성 (개발 환경용 - 프로덕션에서는 Alembic 사용)
+Base.metadata.create_all(bind=engine)
 
 # 간단한 응답 스키마 (임시)
 class HealthCheck(BaseModel):
@@ -53,5 +55,5 @@ def health_check():
 
 app.include_router(users_routes.router, prefix="/api/v1")
 app.include_router(auth_routes.router, prefix="/api/v1")
-# app.include_router(companies_routes.router, prefix="/api/v1")
+app.include_router(companies_routes.router, prefix="/api/v1")
 # app.include_router(cover_letters_routes.router, prefix="/api/v1")
