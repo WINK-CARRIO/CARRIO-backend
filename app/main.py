@@ -7,8 +7,10 @@ from app.domains.auth import router as auth_routes
 from app.domains.companies import router as companies_routes
 from app.shared.database import Base, engine
 
-# 테이블 생성 (개발 환경용 - 프로덕션에서는 Alembic 사용)
-Base.metadata.create_all(bind=engine)
+# 테이블 생성은 Alembic 마이그레이션으로 관리합니다
+# 새 테이블 추가 시: alembic revision --autogenerate -m "Add new table"
+# DB에 적용: alembic upgrade head
+# Base.metadata.create_all(bind=engine)  # ← Alembic 사용으로 더 이상 필요 없음
 
 # 간단한 응답 스키마 (임시)
 class HealthCheck(BaseModel):
