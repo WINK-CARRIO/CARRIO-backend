@@ -25,7 +25,8 @@ class UserSpec(Base):
     __tablename__ = "user_specs"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    job_category_id = Column(Integer, ForeignKey("job_categories.id", ondelete="RESTRICT"), nullable=True)
 
     structured_data = Column(JSONB)
     free_experiences = Column(JSONB)
@@ -38,3 +39,4 @@ class UserSpec(Base):
     )
 
     user = relationship("User", back_populates="spec")
+    job_category = relationship("JobCategory")  # 문자열 참조로 순환 import 방지

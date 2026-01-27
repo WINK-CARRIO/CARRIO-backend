@@ -1,12 +1,10 @@
 # Database 패키지
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
+from app.config import settings
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:postgres123@localhost:5432/coverletter"
-)
+# [의도] config.py의 Settings에서 DATABASE_URL을 가져옴 (.env 파일 자동 로드)
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
 

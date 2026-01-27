@@ -60,7 +60,16 @@ docker-compose ps
 docker-compose logs -f postgres
 ```
 
-### 6. 서버 실행
+### 6. 데이터베이스 마이그레이션
+```bash
+# Alembic으로 DB 스키마 생성
+alembic upgrade head
+```
+
+> **참고**: Alembic은 Git처럼 DB 스키마를 버전 관리합니다.  
+> 자세한 사용법은 [ALEMBIC_GUIDE.md](./ALEMBIC_GUIDE.md)를 참고하세요.
+
+### 7. 서버 실행
 ```bash
 # venv 변경 감지 제외하고 실행 (권장)
 uvicorn app.main:app --reload --reload-exclude 'venv/*'
@@ -69,7 +78,7 @@ uvicorn app.main:app --reload --reload-exclude 'venv/*'
 uvicorn app.main:app --reload
 ```
 
-> **참고**: 서버 시작 시 DB 테이블이 자동으로 생성됩니다 (SQLAlchemy ORM 사용)  
+> **참고**: DB 테이블은 Alembic 마이그레이션으로 관리됩니다.  
 > pgvector 확장은 Docker 이미지에 포함되어 있습니다.
 
 **서버 접속:**
