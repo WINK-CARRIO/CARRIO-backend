@@ -1,63 +1,37 @@
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Optional
 
 from .models import User, UserSpec
 from .schemas import UserSpecCreate, UserSpecUpdate
+from .exceptions import UserSpecNotFoundException, UserSpecAlreadyExistsException
 from app.domains.companies.models import JobCategory
+from app.domains.companies.exceptions import JobCategoryNotFoundException
+
+
+def _validate_job_category(db: Session, category_id: int) -> None:
+    #직군 유효성 검증
+    job_category = db.query(JobCategory).filter(
+        JobCategory.id == category_id
+    ).first()
+    if not job_category:
+        raise JobCategoryNotFoundException()
 
 
 def create_user_spec(
     db: Session,
-    user_id: int,
+    user: User,
     spec_data: UserSpecCreate
 ) -> UserSpec:
-    """
-    사용자 스펙 생성
-    
-    Args:
-        db: 데이터베이스 세션
-        user_id: 사용자 ID
-        spec_data: 스펙 생성 데이터
-    
-    Returns:
-        생성된 UserSpec 객체
-    
-    Raises:
-        HTTPException 404: 사용자가 존재하지 않는 경우
-        HTTPException 404: job_category_id가 유효하지 않은 경우
-        HTTPException 409: 이미 스펙이 존재하는 경우
-    """
-    # 사용자 존재 확인
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다"
-        )
-    
-    # 이미 스펙이 존재하는지 확인 (1:1 관계)
-    existing_spec = db.query(UserSpec).filter(UserSpec.user_id == user_id).first()
+    #이미 스펙이 존재하는지 확인 (1:1 관계)
+    existing_spec = db.query(UserSpec).filter(UserSpec.user_id == user.id).first()
     if existing_spec:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 스펙이 존재합니다"
-        )
+        raise UserSpecAlreadyExistsException()
     
-    # job_category_id 유효성 검증
     if spec_data.job_category_id is not None:
-        job_category = db.query(JobCategory).filter(
-            JobCategory.id == spec_data.job_category_id
-        ).first()
-        if not job_category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="직군을 찾을 수 없습니다"
-            )
+        _validate_job_category(db, spec_data.job_category_id)
     
-    # 스펙 생성
+    #스펙 생성
     new_spec = UserSpec(
-        user_id=user_id,
+        user_id=user.id,
         job_category_id=spec_data.job_category_id,
         structured_data=spec_data.structured_data.model_dump() if spec_data.structured_data else None,
         free_experiences=[exp.model_dump() for exp in spec_data.free_experiences] if spec_data.free_experiences else None
@@ -70,73 +44,31 @@ def create_user_spec(
     return new_spec
 
 
-def get_user_spec(db: Session, user_id: int) -> UserSpec:
-    """
-    사용자 스펙 조회
-    
-    Args:
-        db: 데이터베이스 세션
-        user_id: 사용자 ID
-    
-    Returns:
-        UserSpec 객체
-    
-    Raises:
-        HTTPException 404: 스펙이 존재하지 않는 경우
-    """
-    spec = db.query(UserSpec).filter(UserSpec.user_id == user_id).first()
+def get_user_spec(db: Session, user: User) -> UserSpec:
+    spec = db.query(UserSpec).filter(UserSpec.user_id == user.id).first()
     if not spec:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="스펙을 찾을 수 없습니다"
-        )
+        raise UserSpecNotFoundException()
     return spec
 
 
 def update_user_spec(
     db: Session,
-    user_id: int,
+    user: User,
     spec_data: UserSpecUpdate
 ) -> UserSpec:
-    """
-    사용자 스펙 수정 (부분 업데이트)
-    
-    Args:
-        db: 데이터베이스 세션
-        user_id: 사용자 ID
-        spec_data: 스펙 수정 데이터
-    
-    Returns:
-        수정된 UserSpec 객체
-    
-    Raises:
-        HTTPException 404: 스펙이 존재하지 않는 경우
-        HTTPException 404: job_category_id가 유효하지 않은 경우
-    """
-    spec = db.query(UserSpec).filter(UserSpec.user_id == user_id).first()
+    spec = db.query(UserSpec).filter(UserSpec.user_id == user.id).first()
     if not spec:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="스펙을 찾을 수 없습니다"
-        )
+        raise UserSpecNotFoundException()
     
-    # job_category_id 유효성 검증
     if spec_data.job_category_id is not None:
-        job_category = db.query(JobCategory).filter(
-            JobCategory.id == spec_data.job_category_id
-        ).first()
-        if not job_category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="직군을 찾을 수 없습니다"
-            )
+        _validate_job_category(db, spec_data.job_category_id)
         spec.job_category_id = spec_data.job_category_id
     
-    # structured_data 업데이트 (제공된 경우만)
+    #structured_data 업데이트 (제공된 경우만)
     if spec_data.structured_data is not None:
         spec.structured_data = spec_data.structured_data.model_dump()
     
-    # free_experiences 업데이트 (제공된 경우만)
+    #free_experiences 업데이트 (제공된 경우만)
     if spec_data.free_experiences is not None:
         spec.free_experiences = [exp.model_dump() for exp in spec_data.free_experiences]
     
@@ -146,23 +78,10 @@ def update_user_spec(
     return spec
 
 
-def delete_user_spec(db: Session, user_id: int) -> None:
-    """
-    사용자 스펙 삭제
-    
-    Args:
-        db: 데이터베이스 세션
-        user_id: 사용자 ID
-    
-    Raises:
-        HTTPException 404: 스펙이 존재하지 않는 경우
-    """
-    spec = db.query(UserSpec).filter(UserSpec.user_id == user_id).first()
+def delete_user_spec(db: Session, user: User) -> None:
+    spec = db.query(UserSpec).filter(UserSpec.user_id == user.id).first()
     if not spec:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="스펙을 찾을 수 없습니다"
-        )
+        raise UserSpecNotFoundException()
     
     db.delete(spec)
     db.commit()
