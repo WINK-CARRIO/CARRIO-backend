@@ -26,7 +26,7 @@ class UserSpec(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
-    job_category_id = Column(Integer, ForeignKey("job_categories.id"), nullable=True)
+    job_category_id = Column(Integer, ForeignKey("job_categories.id", ondelete="RESTRICT"), nullable=True)
 
     structured_data = Column(JSONB)
     free_experiences = Column(JSONB)
