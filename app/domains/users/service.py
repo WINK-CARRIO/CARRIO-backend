@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from .models import User, UserSpec
 from .schemas import UserSpecCreate, UserSpecUpdate
 from .exceptions import UserSpecNotFoundException, UserSpecAlreadyExistsException
-from app.domains.companies.models import JobCategory
-from app.domains.companies.exceptions import JobCategoryNotFoundException
+from app.domains.job_categories.models import JobCategory
+from app.domains.job_categories.exceptions import JobCategoryNotFoundException
 
 
 def _validate_job_category(db: Session, category_id: int) -> None:
