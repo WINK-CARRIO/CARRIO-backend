@@ -1,4 +1,4 @@
-"""Company 도메인 Custom Exceptions"""
+"""JobCategory 도메인 Custom Exceptions"""
 
 from fastapi import HTTPException, status
 
