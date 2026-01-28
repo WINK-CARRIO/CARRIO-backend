@@ -1,3 +1,5 @@
+from typing import Optional, List, Tuple
+
 from sqlalchemy.orm import Session
 from .models import Company
 from .schemas import CompanyCreate, CompanyUpdate
@@ -27,11 +29,11 @@ def create_company(db: Session, data: CompanyCreate) -> Company:
 # 기업 목록 조회
 def get_companies(
     db: Session,
-    search: str | None = None,
+    search: Optional[str] = None,
     sort: str = "name",
     page: int = 1,
     limit: int = 20,
-) -> tuple[int, list[Company]]:
+) -> Tuple[int, List[Company]]:
     query = db.query(Company)
 
     # 기업명 검색

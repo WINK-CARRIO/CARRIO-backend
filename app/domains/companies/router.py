@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -28,7 +30,7 @@ def create(
 
 @router.get("/companies", response_model=CompanyListResponse)
 def list_all(
-    search: str | None = Query(default=None),
+    search: Optional[str] = Query(default=None),
     sort: str = Query(default="name", pattern="^(name|latest)$"),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
