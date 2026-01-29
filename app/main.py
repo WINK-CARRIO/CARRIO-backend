@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from app.domains.users import router as users_routes
 from app.domains.auth import router as auth_routes
 from app.shared.database import Base, engine
+from app.domains.auth.exception_handlers import register_auth_exception_handlers
 
 # Base.metadata.create_all(bind=engine)
 
@@ -18,6 +19,9 @@ app = FastAPI(
     description="기업 DNA 기반 자소서 생성 및 분석 서비스",
     version="0.1.0"
 )
+
+# 예외 처리 핸들러
+register_auth_exception_handlers(app)
 
 # CORS 설정 (프론트엔드 개발용)
 app.add_middleware(

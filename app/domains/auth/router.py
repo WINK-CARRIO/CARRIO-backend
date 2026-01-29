@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from app.shared.database import get_db
 from app.domains.users.models import User
 from app.domains.users.schemas import UserResponse
-from .exceptions import EmailAlreadyExistsError, PasswordRequiredError, InvalidPasswordError
 from .kakao import get_kakao_user
 from .schemas import RegisterRequest, TokenResponse, UpdateMeRequest, DeleteMeRequest
 from .service import create_user, authenticate_user, update_me, delete_me, get_or_create_kakao_user
@@ -18,13 +17,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    try:
-        return create_user(db, body)
-    except EmailAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 있는 이메일 입니다"
-        )
+    return create_user(db, body)
+
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -68,18 +62,8 @@ def delete_me_api(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user),
 ):
-    try:
-        delete_me(db, current_user, body.password)
-    except PasswordRequiredError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="비밀번호가 필요합니다",
-        )
-    except InvalidPasswordError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="비밀번호가 올바르지 않습니다",
-        )
+    delete_me(db, current_user, body.password)
+
 
 @router.get("/kakao/login")
 def kakao_login():
@@ -93,21 +77,15 @@ def kakao_login():
 
 @router.get("/kakao/callback", response_model=TokenResponse)
 def kakao_callback(code: str, db: Session = Depends(get_db)):
-    try:
-        kakao_user = get_kakao_user(code)
-        user = get_or_create_kakao_user(db, kakao_user)
-        access_token = create_access_token({"user_id": str(user.id)})
 
-        return {
+    kakao_user = get_kakao_user(code)
+    user = get_or_create_kakao_user(db, kakao_user)
+    access_token = create_access_token({"user_id": str(user.id)})
+
+    return {
             "access_token": access_token,
             "token_type": "bearer",
         }
-
-    except EmailAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 존재하는 이메일입니다."
-        )
 
 @router.post("/logout")
 def logout(current_user: User = Depends(get_current_user)):
