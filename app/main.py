@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from app.domains.users import router as users_routes
 from app.domains.auth import router as auth_routes
 from app.domains.companies import router as companies_routes
+from app.domains.job_categories import router as job_categories_routes
 from app.shared.database import Base, engine
 
 # 테이블 생성은 Alembic 마이그레이션으로 관리합니다
@@ -58,4 +59,5 @@ def health_check():
 app.include_router(users_routes.router, prefix="/api/v1")
 app.include_router(auth_routes.router, prefix="/api/v1")
 app.include_router(companies_routes.router, prefix="/api/v1")
+app.include_router(job_categories_routes.router, prefix="/api/v1")
 # app.include_router(cover_letters_routes.router, prefix="/api/v1")

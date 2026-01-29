@@ -11,7 +11,8 @@ from app.shared.database import Base
 
 # [의도] 모든 모델을 import해서 Alembic이 자동 감지할 수 있게 함
 from app.domains.users.models import User, UserSpec
-from app.domains.companies.models import JobCategory
+from app.domains.companies.models import Company
+from app.domains.job_categories.models import JobCategory
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
