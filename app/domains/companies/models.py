@@ -13,3 +13,4 @@ class Company(Base):
     logo_url = Column(String(500))
     website_url = Column(String(500))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
