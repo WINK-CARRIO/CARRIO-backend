@@ -7,13 +7,23 @@ def get_kakao_access_token(code: str) -> str:
     data = {
         "grant_type": "authorization_code",
         "client_id": settings.KAKAO_CLIENT_ID,
+        "client_secret": settings.KAKAO_CLIENT_SECRET, #비즈니스앱이면 secret 키도 무조건 필요함
         "redirect_uri": settings.KAKAO_REDIRECT_URI,
         "code": code,
     }
 
-    res = requests.post(url, data=data)
-    res.raise_for_status()
+    try:
+        res = requests.post(url, data=data)
+        res.raise_for_status()
+    except requests.HTTPError as e:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=400,
+            detail="카카오 토큰 발급에 실패했습니다. 앱 권한 설정을 확인하세요."
+        )
+
     return res.json()["access_token"]
+
 
 # access_token으로 카카오 유저 정보 조회
 def get_kakao_user(code: str) -> dict:
