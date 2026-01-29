@@ -93,14 +93,21 @@ def kakao_login():
 
 @router.get("/kakao/callback", response_model=TokenResponse)
 def kakao_callback(code: str, db: Session = Depends(get_db)):
-    kakao_user = get_kakao_user(code)
-    user = get_or_create_kakao_user(db, kakao_user)
-    access_token = create_access_token({"user_id": user.id})
+    try:
+        kakao_user = get_kakao_user(code)
+        user = get_or_create_kakao_user(db, kakao_user)
+        access_token = create_access_token({"user_id": str(user.id)})
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-    }
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+        }
+
+    except EmailAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 존재하는 이메일입니다."
+        )
 
 @router.post("/logout")
 def logout(current_user: User = Depends(get_current_user)):

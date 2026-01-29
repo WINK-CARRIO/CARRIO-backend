@@ -76,6 +76,7 @@ def delete_me(db: Session, user: User, password: Optional[str]):
 
 # 카카오 유저 처리
 def get_or_create_kakao_user(db: Session, kakao_user: dict) -> User:
+    # 1. 이미 카카오로 가입된 유저인지 확인
     user = (
         db.query(User)
         .filter(
@@ -84,10 +85,20 @@ def get_or_create_kakao_user(db: Session, kakao_user: dict) -> User:
         )
         .first()
     )
-
     if user:
         return user
 
+    # 2. 이메일 중복 체크 (일반 회원과 충돌 방지)
+    if kakao_user.get("email"):
+        existing_user = (
+            db.query(User)
+            .filter(User.email == kakao_user["email"])
+            .first()
+        )
+        if existing_user:
+            raise EmailAlreadyExistsError()
+
+    # 3.신규 카카오 유저 생성
     user = User(
         email=kakao_user["email"],
         name=kakao_user["name"],

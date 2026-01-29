@@ -36,8 +36,12 @@ def get_kakao_user(code: str) -> dict:
     res.raise_for_status()
 
     data = res.json()
+
+    kakao_account = data.get("kakao_account", {}) # 없으면 {} 으로 반환
+    properties = data.get("properties", {})
+
     return {
         "oauth_id": str(data["id"]),
-        "email": data["kakao_account"].get("email"),
-        "name": data["properties"].get("nickname"),
+        "email": kakao_account.get("email"), # {}이면 None으로 처리됨
+        "name": properties.get("nickname"),
     }
