@@ -80,7 +80,7 @@ def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     kakao_user = get_kakao_user(code)
     user = get_or_create_kakao_user(db, kakao_user)
-    access_token = create_access_token({"user_id": str(user.id)})
+    access_token = create_access_token({"sub": str(user.id)})
 
     return {
             "access_token": access_token,
