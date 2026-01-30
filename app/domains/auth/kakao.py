@@ -1,8 +1,9 @@
-import requests
+import httpx
+from fastapi import HTTPException
 from app.config import settings
 
 # 카카오에 access_token 요청
-def get_kakao_access_token(code: str) -> str:
+async def get_kakao_access_token(code: str) -> str:
     url = "https://kauth.kakao.com/oauth/token"
     data = {
         "grant_type": "authorization_code",
@@ -12,28 +13,35 @@ def get_kakao_access_token(code: str) -> str:
         "code": code,
     }
 
-    try:
-        res = requests.post(url, data=data)
-        res.raise_for_status()
-    except requests.HTTPError as e:
-        from fastapi import HTTPException
-        raise HTTPException(
-            status_code=400,
-            detail="카카오 토큰 발급에 실패했습니다. 앱 권한 설정을 확인하세요."
-        )
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.post(url, data=data)
+            res.raise_for_status()
+        except httpx.HTTPStatusError:
+            raise HTTPException(
+                status_code=400,
+                detail="카카오 토큰 발급에 실패했습니다. 앱 권한 설정을 확인하세요."
+            )
 
     return res.json()["access_token"]
 
 
 # access_token으로 카카오 유저 정보 조회
-def get_kakao_user(code: str) -> dict:
-    access_token = get_kakao_access_token(code)
+async def get_kakao_user(code: str) -> dict:
+    access_token = await get_kakao_access_token(code)
 
     url = "https://kapi.kakao.com/v2/user/me"
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    res = requests.get(url, headers=headers)
-    res.raise_for_status()
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.get(url, headers=headers)
+            res.raise_for_status()
+        except httpx.HTTPStatusError:
+            raise HTTPException(
+                status_code=400,
+                detail="카카오 사용자 정보를 가져올 수 없습니다."
+            )
 
     data = res.json()
 

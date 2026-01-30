@@ -76,9 +76,9 @@ def kakao_login():
     return {"url": kakao_auth_url}
 
 @router.get("/kakao/callback", response_model=TokenResponse)
-def kakao_callback(code: str, db: Session = Depends(get_db)):
+async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
-    kakao_user = get_kakao_user(code)
+    kakao_user = await get_kakao_user(code)
     user = get_or_create_kakao_user(db, kakao_user)
     access_token = create_access_token({"sub": str(user.id)})
 
