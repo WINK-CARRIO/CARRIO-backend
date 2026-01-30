@@ -7,6 +7,7 @@ from app.domains.auth import router as auth_routes
 from app.domains.companies import router as companies_routes
 from app.domains.job_categories import router as job_categories_routes
 from app.shared.database import Base, engine
+from app.domains.auth.exception_handlers import register_auth_exception_handlers
 
 # 테이블 생성은 Alembic 마이그레이션으로 관리합니다
 # 새 테이블 추가 시: alembic revision --autogenerate -m "Add new table"
@@ -23,6 +24,9 @@ app = FastAPI(
     description="기업 DNA 기반 자소서 생성 및 분석 서비스",
     version="0.1.0"
 )
+
+# 예외 처리 핸들러
+register_auth_exception_handlers(app)
 
 # CORS 설정 (프론트엔드 개발용)
 app.add_middleware(
