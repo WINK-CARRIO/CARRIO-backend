@@ -24,12 +24,11 @@ class WriterAgent:
         self,
         question: str,
         company_name: str,
-        job_position: str,
         company_dna: Optional[Dict[str, Any]],
         matching_strategy: Optional[Dict[str, Any]],
         user_spec: Dict[str, Any]
     ) -> str:
-        """ 단일 질문에 대한 답변 작성 (공통 로직) """
+        """단일 질문에 대한 답변 작성 (공통 로직)"""
         prompt = ChatPromptTemplate.from_messages([
             ("system", """당신은 전문 자기소개서 작성 컨설턴트입니다.
             주어진 정보를 바탕으로 설득력 있고 진정성 있는 자소서 답변을 작성하세요.
@@ -61,7 +60,6 @@ class WriterAgent:
         prompt_content = self._build_prompt_content(
             question=question,
             company_name=company_name,
-            job_position=job_position,
             company_dna=company_dna,
             matching_strategy=matching_strategy,
             user_spec=user_spec
@@ -89,7 +87,6 @@ class WriterAgent:
         self,
         question: str,
         company_name: str,
-        job_position: str,
         company_dna: Optional[Dict[str, Any]],
         matching_strategy: Optional[Dict[str, Any]],
         user_spec: Dict[str, Any]
@@ -99,7 +96,6 @@ class WriterAgent:
 
         sections.append("## 기업 정보")
         sections.append(f"- 기업: {company_name}")
-        sections.append(f"- 직무: {job_position}")
 
         if company_dna:
             sections.append("\n## 기업이 원하는 인재상")

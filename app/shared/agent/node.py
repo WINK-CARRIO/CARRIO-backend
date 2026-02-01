@@ -162,7 +162,6 @@ async def write_answers_node(state: CoverLetterState) -> Dict[str, Any]:
     company_info = state.get("company_info", {})
     questions = state.get("questions", [])
     company_name = company_info.get("name", "")
-    job_position = ""  # TODO: job_position 추가
     company_dna = state.get("company_dna")
     matching_strategy = state.get("matching_strategy")
     user_spec = state.get("user_spec", {})
@@ -172,7 +171,6 @@ async def write_answers_node(state: CoverLetterState) -> Dict[str, Any]:
         writer.write_single_answer(
             question=question,
             company_name=company_name,
-            job_position=job_position,
             company_dna=company_dna,
             matching_strategy=matching_strategy,
             user_spec=user_spec
