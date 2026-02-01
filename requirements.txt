@@ -27,6 +27,7 @@ openai==1.54.5
 # LangChain (AI Agent Framework)
 langchain==0.3.7
 langchain-openai==0.2.8
+langchain-anthropic==0.3.3
 langchain-community==0.3.7
 langgraph==0.2.40
 typing-extensions==4.12.2
