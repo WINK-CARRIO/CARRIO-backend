@@ -13,8 +13,12 @@ class CoverLetter(Base):
     user_spec_id = Column(Integer, ForeignKey("user_specs.id", ondelete="CASCADE"), nullable=False)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     job_category_id = Column(Integer, ForeignKey("job_categories.id", ondelete="RESTRICT"), nullable=True)
-    question = Column(Text, nullable=False)
-    content = Column(Text)
+    # 질문-답변 항목들 (JSONB 배열)
+    # [{ "question": { "content": "...", "min_length": 500, "max_length": 700 },
+    #    "answer": { "content": "...", "length": 650, "guide_comments": [...] } }, ...]
+    items = Column(JSONB, nullable=False)
+    # question = Column(Text, nullable=False)
+    # content = Column(Text)
     status = Column(String(50), default="pending")
     generation_metadata = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
