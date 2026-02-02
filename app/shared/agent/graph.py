@@ -25,11 +25,18 @@ def create_cover_letter_graph(db: Session):
     # StateGraph 생성
     workflow = StateGraph(CoverLetterState)
 
+    # db를 사용하는 노드를 위한 async wrapper
+    async def load_user_spec_wrapper(state):
+        return await load_user_spec_node(state, db)
+
+    async def load_company_info_wrapper(state):
+        return await load_company_info_node(state, db)
+
     # ===== 노드 추가 =====
 
     # Stage 1: 데이터 수집
-    workflow.add_node("load_user_spec", lambda state: load_user_spec_node(state, db))
-    workflow.add_node("load_company_info", lambda state: load_company_info_node(state, db))
+    workflow.add_node("load_user_spec", load_user_spec_wrapper)
+    workflow.add_node("load_company_info", load_company_info_wrapper)
     workflow.add_node("generate_search_queries", generate_search_queries_node)
     workflow.add_node("search_with_tavily", search_with_tavily_node)
     workflow.add_node("extract_urls", extract_urls_node)
