@@ -12,3 +12,13 @@ class JobCategoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class JobCategoryCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class JobCategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
