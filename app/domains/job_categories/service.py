@@ -32,12 +32,17 @@ def update_job_category(db: Session, job_category_id: int, data: JobCategoryUpda
         raise JobCategoryNotFoundError()
 
     # 직군명 변경 시 중복 체크
-    if data.name and data.name != job_category.name:
+    if data.name is not None and data.name != job_category.name:
         existing = db.query(JobCategory).filter(JobCategory.name == data.name).first()
         if existing:
             raise JobCategoryDuplicateError()
 
     update_data = data.model_dump(exclude_unset=True)
+    # 이름이 비어 있거나 공백뿐인 경우는 업데이트하지 않도록 방지
+    if "name" in update_data:
+        name_value = update_data["name"]
+        if isinstance(name_value, str) and not name_value.strip():
+            del update_data["name"]
     for key, value in update_data.items():
         setattr(job_category, key, value)
 
