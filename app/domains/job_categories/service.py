@@ -1,9 +1,10 @@
 from typing import List
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from .models import JobCategory
 from .schemas import JobCategoryCreate, JobCategoryUpdate
-from .exceptions import JobCategoryNotFoundError, JobCategoryDuplicateError
+from .exceptions import JobCategoryNotFoundError, JobCategoryDuplicateError, JobCategoryInUseError
 
 
 def create_job_category(db: Session, data: JobCategoryCreate) -> JobCategory:
@@ -56,5 +57,9 @@ def delete_job_category(db: Session, job_category_id: int) -> None:
     if not job_category:
         raise JobCategoryNotFoundError()
 
-    db.delete(job_category)
-    db.commit()
+    try:
+        db.delete(job_category)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise JobCategoryInUseError()

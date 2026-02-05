@@ -8,7 +8,7 @@ from app.domains.auth.dependencies import get_current_user, get_admin_user
 from app.domains.users.models import User
 from .schemas import JobCategoryCreate, JobCategoryUpdate, JobCategoryResponse
 from .service import create_job_category, get_job_categories, update_job_category, delete_job_category
-from .exceptions import JobCategoryNotFoundError, JobCategoryDuplicateError
+from .exceptions import JobCategoryNotFoundError, JobCategoryDuplicateError, JobCategoryInUseError
 
 router = APIRouter(tags=["Job Categories"])
 
@@ -73,4 +73,9 @@ def delete(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="직군을 찾을 수 없습니다",
+        )
+    except JobCategoryInUseError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="해당 직군을 사용 중인 유저가 있어 삭제할 수 없습니다",
         )
