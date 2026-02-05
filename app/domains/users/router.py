@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.shared.database import get_db
@@ -6,6 +6,7 @@ from .schemas import UserResponse, UserSpecCreate, UserSpecUpdate, UserSpecRespo
 from .models import User
 from .service import create_user_spec, get_user_spec, update_user_spec, delete_user_spec
 from ..auth.dependencies import get_current_user
+from ..job_categories.exceptions import JobCategoryNotFoundError
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -22,7 +23,13 @@ def create_my_spec(
     - JWT 토큰의 사용자만 접근 가능
     - 이미 스펙이 존재하면 409 Conflict 반환
     """
-    return create_user_spec(db, current_user, spec_data)
+    try:
+        return create_user_spec(db, current_user, spec_data)
+    except JobCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="직군을 찾을 수 없습니다"
+        )
 
 
 @router.get("/me/spec", response_model=UserSpecResponse)
@@ -50,7 +57,13 @@ def update_my_spec(
     - JWT 토큰의 사용자만 접근 가능
     - 부분 업데이트 지원 (제공된 필드만 수정)
     """
-    return update_user_spec(db, current_user, spec_data)
+    try:
+        return update_user_spec(db, current_user, spec_data)
+    except JobCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="직군을 찾을 수 없습니다"
+        )
 
 
 @router.delete("/me/spec", status_code=status.HTTP_204_NO_CONTENT)
