@@ -60,7 +60,7 @@ def update(
         )
 
 
-@router.delete("/admin/job-categories/{job_category_id}")
+@router.delete("/admin/job-categories/{job_category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(
     job_category_id: int,
     db: Session = Depends(get_db),
@@ -69,7 +69,6 @@ def delete(
     """직군 삭제 (Admin 전용)"""
     try:
         delete_job_category(db, job_category_id)
-        return {"message": "직군이 삭제되었습니다"}
     except JobCategoryNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
