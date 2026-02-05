@@ -4,7 +4,7 @@ from .models import User, UserSpec
 from .schemas import UserSpecCreate, UserSpecUpdate
 from .exceptions import UserSpecNotFoundException, UserSpecAlreadyExistsException
 from app.domains.job_categories.models import JobCategory
-from app.domains.job_categories.exceptions import JobCategoryNotFoundException
+from app.domains.job_categories.exceptions import JobCategoryNotFoundError
 
 
 def _validate_job_category(db: Session, category_id: int) -> None:
@@ -13,7 +13,7 @@ def _validate_job_category(db: Session, category_id: int) -> None:
         JobCategory.id == category_id
     ).first()
     if not job_category:
-        raise JobCategoryNotFoundException()
+        raise JobCategoryNotFoundError()
 
 
 def create_user_spec(

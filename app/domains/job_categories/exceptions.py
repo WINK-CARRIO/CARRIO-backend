@@ -1,12 +1,8 @@
-"""JobCategory 도메인 Custom Exceptions"""
+class JobCategoryNotFoundError(Exception):
+    """직군을 찾을 수 없음 (404)"""
+    pass
 
-from fastapi import HTTPException, status
 
-
-class JobCategoryNotFoundException(HTTPException):
-    #직군을 찾을 수 없을 때 발생하는 예외
-    def __init__(self):
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="직군을 찾을 수 없습니다"
-        )
+class JobCategoryDuplicateError(Exception):
+    """직군명 중복 (409)"""
+    pass
