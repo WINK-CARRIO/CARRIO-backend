@@ -35,7 +35,7 @@ def login(
 
 
     access_token = create_access_token(
-        data={"sub": str(user.id)}
+        data={"sub": str(user.id), "role": user.role}
     )
 
     return {
@@ -80,7 +80,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     kakao_user = await get_kakao_user(code)
     user = get_or_create_kakao_user(db, kakao_user)
-    access_token = create_access_token({"sub": str(user.id)})
+    access_token = create_access_token({"sub": str(user.id), "role": user.role})
 
     return {
             "access_token": access_token,
