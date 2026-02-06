@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     # Kakao OAuth (Optional for development)
     KAKAO_CLIENT_ID: Optional[str] = "dev-client-id" #TODO 하드코딩됨 추후 변경
     KAKAO_CLIENT_SECRET: Optional[str] = "dev-client-secret" #TODO 하드코딩됨 추후 변경
-    
+
+    # 초기 관리자
+    INITIAL_ADMIN_EMAILS = ["gain3004@gmail.com"]
+
     # JWT
     SECRET_KEY: Optional[str] = "dev-secret-key-change-in-production" #TODO 하드코딩됨 추후 변경
     ALGORITHM: str = "HS256"
