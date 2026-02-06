@@ -9,11 +9,18 @@ from .kakao import get_kakao_user
 from .schemas import RegisterRequest, TokenResponse, UpdateMeRequest, DeleteMeRequest
 from .service import create_user, authenticate_user, update_me, delete_me, get_or_create_kakao_user
 from .jwt import create_access_token
-from .dependencies import get_current_user
+from .dependencies import get_current_user, get_admin_user
 from ...config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+
+@router.get("/admin/users")
+def read_all_users(
+        admin: User = Depends(get_admin_user),
+        db: Session = Depends(get_db),
+):
+    return db.query(User).all()
 
 @router.post("/register", response_model=UserResponse)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
