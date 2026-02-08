@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.shared.database import get_db
@@ -17,6 +17,12 @@ from .service import (
     get_cover_letter_detail,
     delete_cover_letter,
 )
+from .exceptions import (
+    CoverLetterForbiddenException,
+    CoverLetterNotFoundException,
+    CoverLetterGenerationFailedException,
+    CompanyNotFoundException
+)
 
 router = APIRouter(prefix="/cover-letters", tags=["Cover Letters"])
 
@@ -28,7 +34,24 @@ async def create_cover_letter_api(
     db: Session = Depends(get_db)
 ):
     """자소서 생성"""
-    return await create_cover_letter(db, current_user, request)
+    try:
+        return await create_cover_letter(db, current_user, request)
+
+    except CompanyNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="기업을 찾을 수 없습니다"
+        )
+    except CoverLetterGenerationFailedException as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"서버 내부 오류: {str(e)}"
+        )
 
 
 @router.get("", response_model=CoverLetterListResponse)
@@ -49,7 +72,19 @@ def get_cover_letter_detail_api(
     db: Session = Depends(get_db)
 ):
     """자소서 상세 조회"""
-    return get_cover_letter_detail(db, current_user, cover_letter_id)
+    try:
+        return get_cover_letter_detail(db, current_user, cover_letter_id)
+
+    except CoverLetterNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="자소서를 찾을 수 없습니다"
+        )
+    except CoverLetterForbiddenException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 자소서에 대한 접근 권한이 없습니다"
+        )
 
 
 @router.delete("/{cover_letter_id}", response_model=CoverLetterDeleteResponse)
@@ -59,5 +94,17 @@ def delete_cover_letter_api(
     db: Session = Depends(get_db)
 ):
     """자소서 삭제"""
-    delete_cover_letter(db, current_user, cover_letter_id)
-    return CoverLetterDeleteResponse()
+    try:
+        delete_cover_letter(db, current_user, cover_letter_id)
+        return CoverLetterDeleteResponse()
+
+    except CoverLetterNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="자소서를 찾을 수 없습니다"
+        )
+    except CoverLetterForbiddenException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 자소서에 대한 접근 권한이 없습니다"
+        )

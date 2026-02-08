@@ -1,7 +1,20 @@
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
+from typing import Optional
 
+from sqlalchemy.orm import Session
+
+from app.domains.companies.models import Company
+from app.domains.job_categories.models import JobCategory
+from app.domains.talent_values.models import CompanyTalentValue
+from app.domains.talent_values.service import create_company_talent_value, create_job_talent_value
+from app.domains.users.exceptions import UserSpecNotFoundException
+from app.domains.users.models import User, UserSpec
+from app.shared.agent.graph import run_extraction_pipeline, run_generation_pipeline
+from .exceptions import (
+    CoverLetterNotFoundException,
+    CoverLetterGenerationFailedException,
+    CoverLetterForbiddenException,
+    CompanyNotFoundException,
+)
 from .models import CoverLetter
 from .schemas import (
     CoverLetterCreateRequest,
@@ -13,21 +26,6 @@ from .schemas import (
     QuestionResponse,
     AnswerResponse,
 )
-from .exceptions import (
-    CoverLetterNotFoundException,
-    CoverLetterGenerationFailedException,
-    CoverLetterForbiddenException,
-    CompanyNotFoundException,
-)
-
-from app.domains.users.models import User, UserSpec
-from app.domains.users.exceptions import UserSpecNotFoundException
-from app.domains.companies.models import Company
-from app.domains.talent_values.models import CompanyTalentValue
-from app.domains.job_categories.models import JobCategory
-from app.domains.talent_values.service import create_company_talent_value, create_job_talent_value
-
-from app.shared.agent.graph import run_extraction_pipeline, run_generation_pipeline
 
 
 async def create_cover_letter(

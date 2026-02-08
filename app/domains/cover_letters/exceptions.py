@@ -1,48 +1,23 @@
-"""CoverLetter 도메인 Custom Exceptions"""
-
-from fastapi import HTTPException, status
-
-
-class CoverLetterNotFoundException(HTTPException):
-    """자소서를 찾을 수 없을 때 발생하는 예외"""
-    def __init__(self):
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="자소서를 찾을 수 없습니다"
-        )
+class CoverLetterNotFoundException(Exception):
+    """자소서를 찾을 수 없음 (404)"""
+    pass
 
 
-class CoverLetterGenerationFailedException(HTTPException):
-    """자소서 생성 실패 시 발생하는 예외"""
-    def __init__(self, message: str = "자소서 생성에 실패했습니다"):
-        super().__init__(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=message
-        )
+class CoverLetterGenerationFailedException(Exception):
+    """자소서 생성 실패 (500)"""
+    pass
 
 
-class CoverLetterForbiddenException(HTTPException):
-    """자소서 접근 권한이 없을 때 발생하는 예외"""
-    def __init__(self):
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="해당 자소서에 대한 접근 권한이 없습니다"
-        )
+class CoverLetterForbiddenException(Exception):
+    """자소서 접근 권한 없음 (403)"""
+    pass
 
 
-class InvalidQuestionException(HTTPException):
-    """유효하지 않은 질문일 때 발생하는 예외"""
-    def __init__(self, message: str = "유효하지 않은 질문입니다"):
-        super().__init__(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=message
-        )
+class InvalidQuestionException(Exception):
+    """유효하지 않은 질문 데이터 (400)"""
+    pass
 
 
-class CompanyNotFoundException(HTTPException):
-    """기업을 찾을 수 없을 때 발생하는 예외"""
-    def __init__(self):
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="기업을 찾을 수 없습니다"
-        )
+class CompanyNotFoundException(Exception):
+    """기업을 찾을 수 없음 (404)"""
+    pass

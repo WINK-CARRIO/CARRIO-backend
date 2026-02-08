@@ -20,7 +20,7 @@ class CoverLetter(Base):
     content = Column(JSONB)
 
     status = Column(String(50), default="pending")
-    generation_metadata = Column(JSONB)
+    generation_metadata = Column(JSONB) # 품질 평가용
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
