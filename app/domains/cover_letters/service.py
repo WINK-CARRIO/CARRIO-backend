@@ -77,7 +77,7 @@ def _fetch_pipeline_data_sync(db: Session, user_id: int, company_id: int, job_ca
         "user_spec": user_spec,
         "company": company,
         "job_category_name": job_category_name,
-        "company_dna": company_dna
+        "existing_dna": company_dna
     }
 
 

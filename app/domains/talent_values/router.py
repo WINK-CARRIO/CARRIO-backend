@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-import app.shared.agent.node
-from app.shared.database import get_db
 from app.domains.auth.dependencies import get_admin_user
+from app.domains.companies.exceptions import CompanyNotFoundError
+from app.domains.job_categories.exceptions import JobCategoryNotFoundError
 from app.domains.users.models import User
-from app.domains.companies.models import Company
-from app.domains.job_categories.models import JobCategory
-from app.shared.agent.graph import run_extraction_pipeline
-
+from app.shared.agent.exceptions import (
+    CompanyResearchError,
+    CompanyDNAExtractionError
+)
+from app.shared.database import get_db
+from .exceptions import TalentValueNotFoundError
 from .schemas import (
     TalentValueUpdate,
     JobTalentValueUpdate,
@@ -20,21 +22,14 @@ from .schemas import (
 )
 from .service import (
     get_job_categories_with_talent_values,
-    create_company_talent_value,
-    create_job_talent_value,
     get_company_talent_values,
     get_job_talent_values,
     update_company_talent_values,
     update_job_talent_values,
     delete_company_talent_values,
     delete_job_talent_values,
-)
-from .exceptions import TalentValueNotFoundError
-from app.domains.companies.exceptions import CompanyNotFoundError
-from app.domains.job_categories.exceptions import JobCategoryNotFoundError
-from app.shared.agent.exceptions import (
-    CompanyResearchError,
-    CompanyDNAExtractionError
+    extract_and_save_company_talent,
+    extract_and_save_job_talent,
 )
 
 router = APIRouter(tags=["Talent Values"])
@@ -56,91 +51,6 @@ def get_job_categories_with_talent_values_list(
             detail="기업을 찾을 수 없습니다",
         )
 
-
-@router.post("/companies/{company_id}/talent-values/extract", response_model=CompanyTalentValueResponse)
-async def extract_company_talent(
-    company_id: int,
-    db: Session = Depends(get_db),
-):
-    """전사 인재상 추출 및 저장"""
-    company = db.query(Company).filter(Company.id == company_id).first()
-    if not company:
-        raise CompanyNotFoundError()
-
-    try:
-        extracted_dna = await run_extraction_pipeline(company_name=company.name)
-    except Exception as e:
-        raise CompanyResearchError(f"인재상 추출 파이프라인 에러: {str(e)}")
-
-    if not extracted_dna:
-        raise CompanyDNAExtractionError("AI가 유효한 인재상을 추출하지 못했습니다.")
-
-    talent_data = {
-        "keywords": extracted_dna.get("keywords", []),
-        "description": extracted_dna.get("communication_tone", ""),
-        "details": extracted_dna.get("ideal_traits", []),
-        "core_values": extracted_dna.get("core_values", []),
-        "preferred_experiences": extracted_dna.get("preferred_experiences", [])
-    }
-
-    saved_talent = create_company_talent_value(db, company_id, talent_data)
-
-    return {
-        "id": saved_talent.id,
-        "company_id": company.id,
-        "company_name": company.name,
-        "talent_values": {"overall": saved_talent.values},
-        "extracted_at": saved_talent.extracted_at,
-    }
-
-
-@router.post(
-    "/companies/{company_id}/job-categories/{job_category_id}/talent-values/extract",
-    response_model=JobTalentValueResponse,
-)
-async def extract_job_talent(
-    company_id: int,
-    job_category_id: int,
-    db: Session = Depends(get_db),
-):
-    """직무 인재상 추출 및 저장"""
-    company = db.query(Company).filter(Company.id == company_id).first()
-    if not company:
-        raise CompanyNotFoundError()
-
-    job_cat = db.query(JobCategory).filter(JobCategory.id == job_category_id).first()
-    if not job_cat:
-        raise JobCategoryNotFoundError()
-
-    try:
-        extracted_dna = await run_extraction_pipeline(
-            company_name=company.name,
-            job_category=job_cat.name
-        )
-    except Exception as e:
-        raise CompanyResearchError(f"직무 인재상 추출 파이프라인 에러: {str(e)}")
-
-    if not extracted_dna:
-        raise CompanyDNAExtractionError("유효한 인재상을 추출하지 못했습니다.")
-
-    talent_data = {
-        "keywords": extracted_dna.get("keywords", []),
-        "description": extracted_dna.get("communication_tone", ""),
-        "details": extracted_dna.get("ideal_traits", []),
-        "technical_requirements": extracted_dna.get("preferred_experiences", [])
-    }
-
-    saved_talent = create_job_talent_value(db, company_id, job_category_id, talent_data)
-
-    return {
-        "id": saved_talent.id,
-        "company_id": company.id,
-        "company_name": company.name,
-        "job_category_id": job_cat.id,
-        "job_category_name": job_cat.name,
-        "talent_values": {"job_specific": saved_talent.values},
-        "extracted_at": saved_talent.extracted_at,
-    }
 
 
 @router.get("/companies/{company_id}/talent-values", response_model=CompanyTalentValueResponse)
@@ -193,6 +103,71 @@ def get_job_talent(
 
 
 # --- Admin API ---
+
+@router.post(
+    "/admin/companies/{company_id}/extract-talent-values",
+    response_model=CompanyTalentValueResponse
+)
+async def extract_company_talent(
+    company_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """전사 인재상 추출 및 저장 (Admin)"""
+    try:
+        return await extract_and_save_company_talent(db, company_id)
+
+    except CompanyNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="기업을 찾을 수 없습니다",
+        )
+    except (CompanyResearchError, CompanyDNAExtractionError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"서버 내부 오류: {str(e)}",
+        )
+
+
+@router.post(
+    "/admin/companies/{company_id}/job-categories/{job_category_id}/extract-talent-values",
+    response_model=JobTalentValueResponse,
+)
+async def extract_job_talent(
+    company_id: int,
+    job_category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user),
+):
+    """직무 인재상 추출 및 저장 (Admin)"""
+    try:
+        return await extract_and_save_job_talent(db, company_id, job_category_id)
+
+    except CompanyNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="기업을 찾을 수 없습니다",
+        )
+    except JobCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="직군을 찾을 수 없습니다",
+        )
+    except (CompanyResearchError, CompanyDNAExtractionError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"서버 내부 오류: {str(e)}",
+        )
 
 @router.put("/admin/companies/{company_id}/talent-values", response_model=AdminTalentValueResponse)
 def update_company_talent(
