@@ -97,7 +97,7 @@ class ExtractionState(TypedDict):
 class GenerationState(TypedDict):
     """자소서 생성 파이프라인 상태"""
     user_spec: Dict[str, Any]
-    company_dna: Dict[str, Any]   # DB JSON -> TypedDict 변환 필요
+    company_dna: Dict[str, Any]
     company_info: Dict[str, Any]
     questions: List[QuestionInfo]
 

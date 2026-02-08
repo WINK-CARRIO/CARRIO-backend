@@ -5,12 +5,8 @@ Extraction(추출)과 Generation(생성) 파이프라인의 노드를 분리하�
 from typing import Dict, Any, List
 from .state import ExtractionState, GenerationState
 from .agents import (
-    ResearcherAgent,
-    ScraperAgent,
-    AnalyzerAgent,
-    StrategistAgent,
-    WriterAgent,
-    OrchestratorAgent
+    get_researcher, get_scraper, get_analyzer,
+    get_strategist, get_writer, get_orchestrator
 )
 
 # ==========================================
@@ -19,7 +15,7 @@ from .agents import (
 
 async def generate_search_queries_node(state: ExtractionState) -> Dict[str, Any]:
     """검색 쿼리 생성 (ResearcherAgent)"""
-    researcher = ResearcherAgent()
+    researcher = get_researcher()
 
     queries = await researcher.generate_search_queries(
         company_name=state["company_name"],
@@ -31,7 +27,7 @@ async def generate_search_queries_node(state: ExtractionState) -> Dict[str, Any]
 
 async def search_with_tavily_node(state: ExtractionState) -> Dict[str, Any]:
     """Tavily 검색 수행 (ResearcherAgent)"""
-    researcher = ResearcherAgent()
+    researcher = get_researcher()
 
     results = await researcher.search_with_tavily(
         queries=state["search_queries"],
@@ -42,7 +38,7 @@ async def search_with_tavily_node(state: ExtractionState) -> Dict[str, Any]:
 
 async def extract_urls_node(state: ExtractionState) -> Dict[str, Any]:
     """스크래핑할 URL 추출 (ScraperAgent)"""
-    scraper = ScraperAgent()
+    scraper = get_scraper()
 
     urls = await scraper.extract_urls_to_scrape(
         search_results=state["search_results"],
@@ -53,7 +49,7 @@ async def extract_urls_node(state: ExtractionState) -> Dict[str, Any]:
 
 async def scrape_with_firecrawl_node(state: ExtractionState) -> Dict[str, Any]:
     """Firecrawl 스크래핑 수행 (ScraperAgent)"""
-    scraper = ScraperAgent()
+    scraper = get_scraper()
 
     contents = await scraper.scrape_with_firecrawl(urls=state["scraping_urls"])
     return {"scraped_contents": contents}
@@ -61,7 +57,7 @@ async def scrape_with_firecrawl_node(state: ExtractionState) -> Dict[str, Any]:
 
 async def analyze_company_dna_node(state: ExtractionState) -> Dict[str, Any]:
     """기업 DNA 추출 (AnalyzerAgent)"""
-    analyzer = AnalyzerAgent()
+    analyzer = get_analyzer()
 
     company_dna = await analyzer.extract_company_dna(
         company_name=state["company_name"],
@@ -77,7 +73,7 @@ async def analyze_company_dna_node(state: ExtractionState) -> Dict[str, Any]:
 
 async def create_strategy_node(state: GenerationState) -> Dict[str, Any]:
     """매칭 전략 수립 (StrategistAgent)"""
-    strategist = StrategistAgent()
+    strategist = get_strategist()
 
     matching_strategy = await strategist.create_matching_strategy(
         company_name=state["company_info"].get("name", ""),
@@ -90,7 +86,7 @@ async def create_strategy_node(state: GenerationState) -> Dict[str, Any]:
 
 async def write_single_answer_node(state: dict) -> Dict[str, Any]:
     """단일 질문 답변 생성 (WriterAgent)"""
-    writer = WriterAgent()
+    writer = get_writer()
 
     question_info = state["question_info"]
     question_index = state["question_index"]
@@ -109,7 +105,7 @@ async def write_single_answer_node(state: dict) -> Dict[str, Any]:
 
 async def orchestrate_node(state: GenerationState) -> Dict[str, Any]:
     """최종 조합 및 품질 검증 (OrchestratorAgent)"""
-    orchestrator = OrchestratorAgent()
+    orchestrator = get_orchestrator()
 
     result = await orchestrator.orchestrate_and_verify(
         questions=state["questions"],

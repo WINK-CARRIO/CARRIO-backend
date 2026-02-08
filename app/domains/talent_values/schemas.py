@@ -6,6 +6,18 @@ from datetime import datetime
 
 # --- 요청 스키마 ---
 
+class TalentValueCreate(BaseModel):
+    """전사 인재상 생성 요청"""
+    values: Dict[str, Any]
+    scope: str = "company"
+
+
+class JobTalentValueCreate(BaseModel):
+    """직무별 인재상 생성 요청"""
+    values: Dict[str, Any]
+    scope: str = "job_category"
+
+
 class TalentValueUpdate(BaseModel):
     """전사 인재상 수정 요청"""
     keywords: List[str]

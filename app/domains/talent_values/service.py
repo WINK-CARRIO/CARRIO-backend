@@ -1,4 +1,8 @@
+from typing import Dict
+
+from sqlalchemy.dialects.postgresql import Any
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.functions import func
 
 from app.domains.companies.models import Company
 from app.domains.companies.exceptions import CompanyNotFoundError
@@ -68,6 +72,65 @@ def get_job_categories_with_talent_values(db: Session, company_id: int) -> dict:
             for talent, job_category in talents
         ],
     }
+
+
+# 전사 인재상 저장 (Upsert)
+def create_company_talent_value(db: Session, company_id: int, data: Dict[str, Any]) -> CompanyTalentValue:
+    _get_company_or_raise(db, company_id)
+
+    existing = db.query(CompanyTalentValue).filter(
+        CompanyTalentValue.company_id == company_id,
+        CompanyTalentValue.scope == "company",
+        CompanyTalentValue.job_category_id.is_(None)
+    ).first()
+
+    if existing:
+        existing.values = data
+        existing.last_updated = func.now()
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    new_talent = CompanyTalentValue(
+        company_id=company_id,
+        scope="company",
+        job_category_id=None,
+        values=data
+    )
+    db.add(new_talent)
+    db.commit()
+    db.refresh(new_talent)
+    return new_talent
+
+
+# 직무 인재상 저장 (Upsert)
+def create_job_talent_value(db: Session, company_id: int, job_category_id: int, data: Dict[str, Any]) -> CompanyTalentValue:
+    _get_company_or_raise(db, company_id)
+    _get_job_category_or_raise(db, job_category_id)
+
+    existing = db.query(CompanyTalentValue).filter(
+        CompanyTalentValue.company_id == company_id,
+        CompanyTalentValue.scope == "job_category",
+        CompanyTalentValue.job_category_id == job_category_id
+    ).first()
+
+    if existing:
+        existing.values = data
+        existing.last_updated = func.now()
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    new_talent = CompanyTalentValue(
+        company_id=company_id,
+        scope="job_category",
+        job_category_id=job_category_id,
+        values=data
+    )
+    db.add(new_talent)
+    db.commit()
+    db.refresh(new_talent)
+    return new_talent
 
 
 # 전사 인재상 조회
