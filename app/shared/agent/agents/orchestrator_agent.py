@@ -12,7 +12,9 @@ from ..state import CompanyDNA, MatchingStrategy, GeneratedAnswer, QuestionInfo,
 class FinalItemModel(BaseModel):
     question: str
     answer: str
-    guide_comments: List[str] = Field(description="답변에 대한 구체적인 피드백 및 수정 제안")
+    guide_comments: List[str] = Field(
+        description="사용자가 직접 수정하거나 내용을 더할 때 필요한 조언"
+    )
 
 class QualityReportModel(BaseModel):
     overall_score: int = Field(description="100점 만점 기준 점수")
@@ -70,14 +72,30 @@ class OrchestratorAgent:
 ## 작성된 초안
 {combined_text}
 
+## 지시사항
 위 내용을 검토하여 최종 자소서를 완성하세요.
-각 항목별로 '수정된 답변'과 '가이드 코멘트'를 작성해야 합니다.
-전체적인 흐름, 중복 제거, 톤앤매너 통일을 수행하세요.
+
+**[필수 출력 형식 준수]**:
+1. 반드시 `final_items` 리스트와 `quality_report` 객체 두 가지를 모두 포함해야 합니다.
+2. `final_items`는 JSON 문자열이 아닌 **실제 객체 리스트(List of Objects)**여야 합니다. 
+3. 절대 Markdown Code Block(```json 등)을 사용하지 마세요.
+
+**[가이드 코멘트(guide_comments) 작성 규칙]**:
+1. 절대로 작성된 내용의 요약이나 장점을 나열하지 마세요.
+2. **사용자가 직접 빈칸을 채우거나 더 구체적으로 수정해야 할 부분**을 콕 집어서 조언하세요.
+3. AI가 알 수 없는 **구체적인 수치(%, 금액, 기간)**나 **당시의 구체적인 감정**, **고유한 에피소드 디테일**을 추가하라고 제안하세요.
+
+**가이드 코멘트 예시**:
+- "프로젝트의 진행 기간(예: 3개월)을 명시하면 성실함이 더 돋보입니다."
+- "성과를 '상당한 개선' 대신 '매출 20% 증대'와 같이 구체적인 숫자로 바꿔보세요."
+- "이 부분에서 팀원들과 겪었던 갈등 상황을 조금 더 드라마틱하게 묘사해보세요."
+
+위 규칙을 준수하여 결과물을 생성하세요.
 """
 
         try:
             result: OrchestratorOutput = await self.reviewer.ainvoke([
-                ("system", "당신은 자소서 최종 검수 전문가입니다. 각 답변을 다듬고 평가하세요."),
+                ("system", "당신은 자소서 최종 검수 전문가이자 글쓰기 코치입니다. 답변을 다듬고 사용자에게 실질적인 수정 가이드를 제공하세요."),
                 ("user", prompt_content)
             ])
 
@@ -103,4 +121,5 @@ class OrchestratorAgent:
             }
 
         except Exception as e:
+            print(f"Orchestrator Error Details: {e}")
             raise CoverLetterGenerationError(f"최종 조합 실패: {str(e)}")
