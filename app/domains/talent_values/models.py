@@ -8,9 +8,9 @@ class CompanyTalentValue(Base):
     __tablename__ = "company_talent_values"
 
     id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     scope = Column(String(20), nullable=False, default="company")
-    job_category_id = Column(Integer, ForeignKey("job_categories.id"), nullable=True)
+    job_category_id = Column(Integer, ForeignKey("job_categories.id", ondelete="RESTRICT"), nullable=True)
     values = Column(JSONB, nullable=False)
     extracted_at = Column(DateTime(timezone=True), server_default=func.now())
     last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
