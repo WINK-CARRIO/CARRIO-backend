@@ -62,6 +62,7 @@ class CoverLetterListItem(BaseModel):
     id: int
     company_name: str
     job_category_name: Optional[str]
+    overall_score: Optional[float] = None
     status: str
     created_at: datetime
 

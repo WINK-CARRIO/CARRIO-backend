@@ -1,43 +1,46 @@
 """
-자소서 생성 관련 커스텀 예외
+자소서 생성 서비스 및 에이전트 관련 커스텀 예외 정의
 """
 
+# ===== Base Exceptions =====
 
-class CoverLetterNotFoundError(Exception):
-    """자소서를 찾을 수 없음 (404)"""
+class BaseServiceError(Exception):
+    """서비스 로직 관련 기본 예외"""
     pass
 
 
-class CoverLetterGenerationError(Exception):
-    """자소서 생성 실패 (500)"""
+class BaseAgentError(Exception):
+    """AI 에이전트 수행 중 발생하는 기본 예외 (Graph 중단용)"""
     pass
 
 
-class CompanyResearchError(Exception):
-    """기업 리서치 실패 (500)"""
+# ===== Agent Layer Exceptions (LangGraph Node용) =====
+
+class SearchError(BaseAgentError):
+    """Tavily 검색 실패 또는 API 키 누락"""
     pass
 
 
-class UserSpecNotFoundError(Exception):
-    """사용자 스펙을 찾을 수 없음 (404)"""
+class ScrapingError(BaseAgentError):
+    """Firecrawl 스크래핑 실패 또는 API 키 누락"""
     pass
 
 
-class InvalidRequestError(Exception):
-    """잘못된 요청 (400)"""
+class CompanyResearchError(BaseAgentError):
+    """기업 정보 수집 단계 포괄적 실패"""
     pass
 
 
-class CompanyDNAExtractionError(Exception):
-    """기업 DNA 추출 실패 (500)"""
+class CompanyDNAExtractionError(BaseAgentError):
+    """기업 DNA 추출 실패 (AnalyzerAgent)"""
     pass
 
 
-class StrategyPlanningError(Exception):
-    """전략 수립 실패 (500)"""
+class StrategyPlanningError(BaseAgentError):
+    """자소서 전략 수립 실패 (StrategistAgent)"""
     pass
 
 
-class UserSpecAnalysisError(Exception):
-    """사용자 스펙 분석 실패 (500)"""
+class CoverLetterGenerationError(BaseAgentError):
+    """자소서 답변 작성 또는 최종 조합 실패 (Writer/Orchestrator Agent)"""
     pass

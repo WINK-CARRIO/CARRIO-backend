@@ -1,150 +1,176 @@
 """
 LangGraph 파이프라인 정의
-전체 자소서 생성 워크플로우를 그래프로 구성
 """
-from typing import Dict, Any
+from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END
-from sqlalchemy.orm import Session
-from .state import CoverLetterState
+from langgraph.constants import Send
+from langgraph.types import RetryPolicy
+
+from .state import ExtractionState, GenerationState
 from .node import (
-    load_user_spec_node,
-    load_company_info_node,
     generate_search_queries_node,
     search_with_tavily_node,
     extract_urls_node,
     scrape_with_firecrawl_node,
     analyze_company_dna_node,
     create_strategy_node,
-    write_answers_node,
+    write_single_answer_node,
     orchestrate_node
 )
 
 
-def create_cover_letter_graph(db: Session):
-    """ 자소서 생성 그래프 생성 """
-    # StateGraph 생성
-    workflow = StateGraph(CoverLetterState)
+# ==========================================
+# 인재상 추출용
+# ==========================================
 
-    # db를 사용하는 노드를 위한 async wrapper
-    async def load_user_spec_wrapper(state):
-        return await load_user_spec_node(state, db)
+def create_extraction_graph():
+    """인재상 추출 파이프라인 그래프 생성"""
+    workflow = StateGraph(ExtractionState)
 
-    async def load_company_info_wrapper(state):
-        return await load_company_info_node(state, db)
+    retry_policy = RetryPolicy(max_attempts=3)
 
-    # ===== 노드 추가 =====
+    workflow.add_node("generate_queries", generate_search_queries_node, retry=retry_policy)
+    workflow.add_node("search", search_with_tavily_node, retry=retry_policy)
+    workflow.add_node("extract_urls", extract_urls_node, retry=retry_policy)
 
-    # Stage 1: 데이터 수집
-    workflow.add_node("load_user_spec", load_user_spec_wrapper)
-    workflow.add_node("load_company_info", load_company_info_wrapper)
-    workflow.add_node("generate_search_queries", generate_search_queries_node)
-    workflow.add_node("search_with_tavily", search_with_tavily_node)
-    workflow.add_node("extract_urls", extract_urls_node)
-    workflow.add_node("scrape_with_firecrawl", scrape_with_firecrawl_node)
+    workflow.add_node("scrape", scrape_with_firecrawl_node, retry=RetryPolicy(max_attempts=2))
 
-    # Stage 2: 분석 및 전략 수립
-    workflow.add_node("analyze_company_dna", analyze_company_dna_node)
-    workflow.add_node("create_strategy", create_strategy_node)
+    workflow.add_node("analyze", analyze_company_dna_node, retry=retry_policy)
 
-    # Stage 3: 답변 생성 (단일 노드, 내부에서 asyncio.gather로 병렬 처리)
-    workflow.add_node("write_answers", write_answers_node)
+    workflow.set_entry_point("generate_queries")
+    workflow.add_edge("generate_queries", "search")
+    workflow.add_edge("search", "extract_urls")
+    workflow.add_edge("extract_urls", "scrape")
+    workflow.add_edge("scrape", "analyze")
+    workflow.add_edge("analyze", END)
 
-    # Stage 4: 최종 조합 & 품질 검증
-    workflow.add_node("orchestrate", orchestrate_node)
-
-    # ===== 엣지 연결 (실행 순서 정의) =====
-
-    # 시작점: load_user_spec
-    workflow.set_entry_point("load_user_spec")
-
-    # Stage 1: 데이터 수집 (순차적 실행)
-    workflow.add_edge("load_user_spec", "load_company_info")
-    workflow.add_edge("load_company_info", "generate_search_queries")
-    workflow.add_edge("generate_search_queries", "search_with_tavily")
-    workflow.add_edge("search_with_tavily", "extract_urls")
-    workflow.add_edge("extract_urls", "scrape_with_firecrawl")
-
-    # Stage 2: 분석 및 전략 수립 (순차적 실행)
-    workflow.add_edge("scrape_with_firecrawl", "analyze_company_dna")
-    workflow.add_edge("analyze_company_dna", "create_strategy")
-
-    # Stage 3: 답변 생성 (동적 개수의 질문을 내부에서 병렬 처리)
-    workflow.add_edge("create_strategy", "write_answers")
-
-    # Stage 4: 최종 조합 & 품질 검증
-    workflow.add_edge("write_answers", "orchestrate")
-
-    # 종료
-    workflow.add_edge("orchestrate", END)
-
-    # 그래프 컴파일
     return workflow.compile()
 
 
-async def run_cover_letter_pipeline(
-    user_id: int,
-    company_id: int,
-    job_category_id: int,
-    questions: list[str],
-    db: Session
+async def run_extraction_pipeline(
+    company_name: str,
+    company_info: Dict[str, Any] = None,
+    job_category: str = None
 ) -> Dict[str, Any]:
-    """ 자소서 생성 파이프라인 실행 """
+    """인재상 추출 파이프라인 실행"""
 
-    # 초기 상태 생성
-    initial_state: CoverLetterState = {
-        "user_id": user_id,
-        "company_id": company_id,
-        "job_category_id": job_category_id,
-        "questions": questions,
+    initial_state = {
+        "company_name": company_name,
+        "company_info": company_info or {},
+        "job_category": job_category,
 
-        # Stage 1
-        "user_spec": None,
-        "company_info": None,
         "search_queries": [],
         "search_results": [],
         "scraping_urls": [],
         "scraped_contents": [],
 
-        # Stage 2
         "company_dna": None,
-        "matching_strategy": None,
-
-        # Stage 3
-        "answers": [],
-
-        # Stage 4
-        "final_cover_letter": None,
-        "quality_report": None,
-
-        # 메타데이터
-        "generation_metadata": {},
         "status": "pending",
         "error": None
     }
 
-    # 그래프 생성
-    graph = create_cover_letter_graph(db)
+    graph = create_extraction_graph()
 
-    # 그래프 실행
+    try:
+        result = await graph.ainvoke(initial_state)
+        return result.get("company_dna")
+    except Exception as e:
+        print(f"추출 중 에러: {e}")
+        raise e
+
+
+# ==========================================
+# 자소서 생성용
+# ==========================================
+
+def map_questions(state: GenerationState):
+    """개별 작성 노드로 분배"""
+    questions = state.get("questions", [])
+
+    return [
+        Send("write_single_answer", {
+            "question_info": q,
+            "question_index": i,
+            "company_info": state["company_info"],
+            "matching_strategy": state["matching_strategy"],
+            "company_dna": state["company_dna"],
+            "user_spec": state["user_spec"]
+        })
+        for i, q in enumerate(questions)
+    ]
+
+
+def create_generation_graph():
+    """자소서 생성 파이프라인 그래프 생성"""
+    workflow = StateGraph(GenerationState)
+
+    retry_policy = RetryPolicy(max_attempts=3)
+
+    workflow.add_node("create_strategy", create_strategy_node, retry=retry_policy)
+    workflow.add_node("write_single_answer", write_single_answer_node, retry=retry_policy)
+    workflow.add_node("orchestrate", orchestrate_node, retry=retry_policy)
+
+    workflow.set_entry_point("create_strategy")
+
+    workflow.add_conditional_edges(
+        "create_strategy",
+        map_questions,
+        ["write_single_answer"]
+    )
+
+    workflow.add_edge("write_single_answer", "orchestrate")
+    workflow.add_edge("orchestrate", END)
+
+    return workflow.compile()
+
+
+async def run_generation_pipeline(
+    user_spec: Dict[str, Any],
+    company_dna: Dict[str, Any],
+    company_info: Dict[str, Any],
+    questions: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """자소서 생성 파이프라인 실행"""
+
+    formatted_questions = []
+    for i, q in enumerate(questions):
+        formatted_questions.append({
+            "id": i + 1,
+            "content": q["content"],
+            "min_length": q.get("min_length"),
+            "max_length": q.get("max_length")
+        })
+
+    initial_state = {
+        "user_spec": user_spec,
+        "company_dna": company_dna,
+        "company_info": company_info,
+        "questions": formatted_questions,
+
+        "matching_strategy": None,
+        "answers": [],
+        "final_result": None,
+        "quality_report": None,
+        "status": "pending",
+        "error": None
+    }
+
+    graph = create_generation_graph()
+
     try:
         final_state = await graph.ainvoke(initial_state)
 
-        # 성공 시 상태 업데이트
-        final_state["status"] = "completed"
-
         return {
-            "final_cover_letter": final_state.get("final_cover_letter"),
+            "final_result": final_state.get("final_result"),
             "quality_report": final_state.get("quality_report"),
-            "generation_metadata": final_state.get("generation_metadata", {}),
-            "status": final_state.get("status"),
+            "status": "completed"
         }
-
     except Exception as e:
-        # 실패 시 에러 정보 반환
+        import traceback
+        traceback.print_exc()
         return {
-            "final_cover_letter": None,
+            "final_result": None,
             "quality_report": None,
-            "generation_metadata": {},
             "status": "failed",
             "error": str(e)
         }

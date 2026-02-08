@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from .models import CoverLetter
 from .schemas import (
@@ -18,11 +19,15 @@ from .exceptions import (
     CoverLetterForbiddenException,
     CompanyNotFoundException,
 )
+
 from app.domains.users.models import User, UserSpec
 from app.domains.users.exceptions import UserSpecNotFoundException
 from app.domains.companies.models import Company
+from app.domains.talent_values.models import CompanyTalentValue
 from app.domains.job_categories.models import JobCategory
-from app.shared.agent.graph import run_cover_letter_pipeline
+from app.domains.talent_values.service import create_company_talent_value, create_job_talent_value
+
+from app.shared.agent.graph import run_extraction_pipeline, run_generation_pipeline
 
 
 async def create_cover_letter(
@@ -30,18 +35,20 @@ async def create_cover_letter(
     user: User,
     request: CoverLetterCreateRequest
 ) -> CoverLetterResponse:
-    """자소서 생성"""
-    # 사용자 스펙 확인
+    """
+    자소서 생성
+    1. 기본 정보 확인 (UserSpec, Company)
+    2. 인재상(DNA) 확보 (DB 조회 -> 없으면 AI 추출 + 저장)
+    3. 자소서 생성 + 저장
+    """
     user_spec = db.query(UserSpec).filter(UserSpec.user_id == user.id).first()
     if not user_spec:
         raise UserSpecNotFoundException()
 
-    # 기업 정보 확인
     company = db.query(Company).filter(Company.id == request.company_id).first()
     if not company:
         raise CompanyNotFoundException()
 
-    # 직군 정보 확인 (선택적)
     job_category_name = None
     if request.job_category_id:
         job_category = db.query(JobCategory).filter(
@@ -50,16 +57,79 @@ async def create_cover_letter(
         if job_category:
             job_category_name = job_category.name
 
-    # 질문 content만 추출
-    question_contents = [q.content for q in request.questions]
+    company_dna = None
 
-    # 에이전트 파이프라인 실행
-    result = await run_cover_letter_pipeline(
-        user_id=user.id,
-        company_id=request.company_id,
-        job_category_id=request.job_category_id,
-        questions=question_contents,
-        db=db
+    query = db.query(CompanyTalentValue).filter(
+        CompanyTalentValue.company_id == request.company_id
+    )
+    if request.job_category_id:
+        talent_record = query.filter(
+            CompanyTalentValue.scope == "job_category",
+            CompanyTalentValue.job_category_id == request.job_category_id
+        ).first()
+    else:
+        talent_record = query.filter(
+            CompanyTalentValue.scope == "company",
+            CompanyTalentValue.job_category_id.is_(None)
+        ).first()
+
+    if talent_record:
+        vals = talent_record.values
+        company_dna = {
+            "core_values": vals.get("core_values", []),
+            "ideal_traits": vals.get("details", []),
+            "keywords": vals.get("keywords", []),
+            "communication_tone": vals.get("description", ""),
+            "preferred_experiences": vals.get("technical_requirements", []) if request.job_category_id else vals.get("preferred_experiences", [])
+        }
+
+    else:
+        print(f"📡 인재상 데이터 없음. AI 추출 시작... (Company: {company.name})")
+        extracted_dna = await run_extraction_pipeline(
+            company_name=company.name,
+            job_category=job_category_name
+        )
+
+        if not extracted_dna:
+            raise CoverLetterGenerationFailedException("기업 인재상 분석에 실패하여 자소서를 생성할 수 없습니다.")
+
+        company_dna = extracted_dna
+
+        talent_save_data = {
+            "keywords": extracted_dna.get("keywords", []),
+            "description": extracted_dna.get("communication_tone", ""),
+            "details": extracted_dna.get("ideal_traits", []),
+            "core_values": extracted_dna.get("core_values", []),
+            "technical_requirements" if request.job_category_id else "preferred_experiences": extracted_dna.get("preferred_experiences", [])
+        }
+
+        if request.job_category_id:
+            create_job_talent_value(db, request.company_id, request.job_category_id, talent_save_data)
+        else:
+            create_company_talent_value(db, request.company_id, talent_save_data)
+
+    # 자소서 생성
+    questions_for_agent = [
+        {"content": q.content, "min_length": q.min_length, "max_length": q.max_length}
+        for q in request.questions
+    ]
+
+    user_spec_data = {
+        "structured_data": user_spec.structured_data,
+        "free_experiences": user_spec.free_experiences
+    }
+
+    company_info_data = {
+        "name": company.name,
+        "industry": company.industry,
+        "description": company.description
+    }
+
+    result = await run_generation_pipeline(
+        user_spec=user_spec_data,
+        company_dna=company_dna,
+        company_info=company_info_data,
+        questions=questions_for_agent
     )
 
     if result.get("status") == "failed":
@@ -67,49 +137,43 @@ async def create_cover_letter(
             result.get("error", "자소서 생성 중 오류가 발생했습니다")
         )
 
-    # 답변 파싱 (final_cover_letter는 \n\n으로 구분됨)
-    final_cover_letter = result.get("final_cover_letter", "")
-    answers = final_cover_letter.split("\n\n") if final_cover_letter else []
+    final_items = result.get("final_result", [])
 
-    # items JSONB 배열 생성
-    items_data = []
-    for i, question in enumerate(request.questions):
-        answer_content = answers[i] if i < len(answers) else ""
-        answer_length = len(answer_content)
+    question_data = []
+    content_data = []
 
-        # 가이드 코멘트 생성 (길이 기반)
-        guide_comments = _generate_guide_comments(
-            answer_content=answer_content,
-            min_length=question.min_length,
-            max_length=question.max_length
-        )
-
-        items_data.append({
-            "question": {
-                "content": question.content,
-                "min_length": question.min_length,
-                "max_length": question.max_length
-            },
-            "answer": {
-                "content": answer_content,
-                "length": answer_length,
-                "guide_comments": guide_comments
-            }
+    for req_q in request.questions:
+        question_data.append({
+            "content": req_q.content,
+            "min_length": req_q.min_length,
+            "max_length": req_q.max_length
         })
 
-    # generation_metadata 구성
+        matched_item = next((item for item in final_items if item["question"] == req_q.content), None)
+
+        if matched_item:
+            content_data.append({
+                "content": matched_item["answer"],
+                "length": len(matched_item["answer"]),
+                "guide_comments": matched_item["guide_comments"] # Agent가 생성한 가이드 사용
+            })
+        else:
+            content_data.append({
+                "content": "", "length": 0, "guide_comments": ["생성 실패"]
+            })
+
     generation_metadata = {
         "quality_report": result.get("quality_report", {}),
-        "metadata": result.get("generation_metadata", {})
+        "status": result.get("status")
     }
 
-    # CoverLetter 생성
     cover_letter = CoverLetter(
         user_id=user.id,
         user_spec_id=user_spec.id,
         company_id=request.company_id,
         job_category_id=request.job_category_id,
-        items=items_data,
+        question=question_data,
+        content=content_data,
         status="completed",
         generation_metadata=generation_metadata
     )
@@ -117,7 +181,6 @@ async def create_cover_letter(
     db.commit()
     db.refresh(cover_letter)
 
-    # 응답 생성
     return _build_cover_letter_response(
         cover_letter=cover_letter,
         company_name=company.name,
@@ -132,12 +195,10 @@ def get_cover_letters(
     limit: int = 10
 ) -> CoverLetterListResponse:
     """자소서 목록 조회"""
-    # 전체 개수
     total = db.query(CoverLetter).filter(
         CoverLetter.user_id == user.id
     ).count()
 
-    # 페이지네이션
     offset = (page - 1) * limit
     cover_letters = db.query(CoverLetter).filter(
         CoverLetter.user_id == user.id
@@ -145,7 +206,6 @@ def get_cover_letters(
         CoverLetter.created_at.desc()
     ).offset(offset).limit(limit).all()
 
-    # 응답 데이터 생성
     data = []
     for cl in cover_letters:
         company = db.query(Company).filter(Company.id == cl.company_id).first()
@@ -155,11 +215,19 @@ def get_cover_letters(
                 JobCategory.id == cl.job_category_id
             ).first()
 
+        overall_score = None
+        if cl.generation_metadata:
+            report = cl.generation_metadata.get("quality_report", {})
+            score_raw = report.get("overall_score")
+
+            overall_score = score_raw
+
         data.append(CoverLetterListItem(
             id=cl.id,
             company_name=company.name if company else "Unknown",
             job_category_name=job_category.name if job_category else None,
             status=cl.status,
+            overall_score=overall_score,
             created_at=cl.created_at
         ))
 
@@ -184,15 +252,12 @@ def get_cover_letter_detail(
     if not cover_letter:
         raise CoverLetterNotFoundException()
 
-    # 권한 확인
     if cover_letter.user_id != user.id:
         raise CoverLetterForbiddenException()
 
-    # 기업 정보
     company = db.query(Company).filter(Company.id == cover_letter.company_id).first()
     company_name = company.name if company else "Unknown"
 
-    # 직군 정보
     job_category_name = None
     if cover_letter.job_category_id:
         job_category = db.query(JobCategory).filter(
@@ -201,17 +266,15 @@ def get_cover_letter_detail(
         if job_category:
             job_category_name = job_category.name
 
-    # 응답 생성
     cover_letter_response = _build_cover_letter_response(
         cover_letter=cover_letter,
         company_name=company_name,
         job_category_name=job_category_name
     )
 
-    # matching_analysis 추출
     matching_analysis = None
     if cover_letter.generation_metadata:
-        matching_analysis = cover_letter.generation_metadata.get("metadata")
+        matching_analysis = cover_letter.generation_metadata.get("quality_report")
 
     return CoverLetterDetailResponse(
         cover_letter=cover_letter_response,
@@ -232,7 +295,6 @@ def delete_cover_letter(
     if not cover_letter:
         raise CoverLetterNotFoundException()
 
-    # 권한 확인
     if cover_letter.user_id != user.id:
         raise CoverLetterForbiddenException()
 
@@ -246,19 +308,18 @@ def _build_cover_letter_response(
     job_category_name: Optional[str]
 ) -> CoverLetterResponse:
     """CoverLetterResponse 생성 헬퍼"""
-    # items JSONB를 CoverLetterItemResponse 리스트로 변환
     item_responses = []
-    items_data = cover_letter.items or []
+    questions = cover_letter.question or []
+    contents = cover_letter.content or []
 
-    for item in items_data:
-        question_data = item.get("question", {})
-        answer_data = item.get("answer", {})
+    for i, q in enumerate(questions):
+        answer_data = contents[i] if i < len(contents) else {}
 
         item_responses.append(CoverLetterItemResponse(
             question=QuestionResponse(
-                content=question_data.get("content", ""),
-                min_length=question_data.get("min_length", 500),
-                max_length=question_data.get("max_length", 700)
+                content=q.get("content", ""),
+                min_length=q.get("min_length", 500),
+                max_length=q.get("max_length", 700)
             ),
             answer=AnswerResponse(
                 content=answer_data.get("content", ""),
@@ -279,24 +340,3 @@ def _build_cover_letter_response(
         items=item_responses
     )
 
-
-def _generate_guide_comments(
-    answer_content: str,
-    min_length: int,
-    max_length: int
-) -> List[str]:
-    """답변 길이 기반 가이드 코멘트 생성"""
-    comments = []
-    length = len(answer_content)
-
-    if length < min_length:
-        diff = min_length - length
-        comments.append(f"답변이 {diff}자 부족합니다. 더 구체적인 내용을 추가해보세요.")
-    elif length > max_length:
-        diff = length - max_length
-        comments.append(f"답변이 {diff}자 초과했습니다. 핵심 내용 위주로 줄여보세요.")
-
-    if length < 300:
-        comments.append("프로젝트 기간이나 구체적인 수치를 명시하면 더 설득력이 있습니다.")
-
-    return comments
