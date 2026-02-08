@@ -7,7 +7,7 @@ from typing import Optional
 from dotenv import load_dotenv
 import os
 
-load_dotenv()   # env 못 읽을 시 주석 제거하고 해보기
+# load_dotenv()  # env 못 읽을 시 주석 제거하고 해보기
 
 class AgentSettings(BaseSettings):
     """AI 에이전트 관련 설정"""

@@ -80,6 +80,19 @@ class WriterAgent:
         """프롬프트 내용 구성"""
         sections = [f"## 기업: {company_name}"]
 
+        if company_dna:
+            dna_text = []
+            if core_values := company_dna.get('core_values'):
+                dna_text.append(f"- 핵심 가치: {', '.join(core_values)}")
+            if ideal_traits := company_dna.get('ideal_traits'):
+                dna_text.append(f"- 인재상: {', '.join(ideal_traits)}")
+            if keywords := company_dna.get('keywords'):
+                dna_text.append(f"- 주요 키워드: {', '.join(keywords)}")
+            if tone := company_dna.get('communication_tone'):
+                dna_text.append(f"- 기업 커뮤니케이션 톤: {tone}")
+
+            sections.append(f"## 기업 DNA (반영 필수):\n" + "\n".join(dna_text))
+
         min_len = question_info.get('min_length') or 500
         max_len = question_info.get('max_length') or 700
 
