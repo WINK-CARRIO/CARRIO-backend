@@ -28,6 +28,20 @@ class JobTalentValueUpdate(BaseModel):
 
 # --- 응답 스키마 ---
 
+class JobCategoryItem(BaseModel):
+    """인재상 보유 직군 항목"""
+    job_category_id: int
+    job_category_name: str
+    extracted_at: datetime
+
+
+class JobCategoriesWithTalentValuesResponse(BaseModel):
+    """기업별 인재상 보유 직군 목록 응답"""
+    company_id: int
+    company_name: str
+    job_categories: List[JobCategoryItem]
+
+
 class CompanyTalentValueResponse(BaseModel):
     """전사 인재상 조회 응답"""
     id: int

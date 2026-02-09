@@ -9,12 +9,14 @@ from app.domains.job_categories.exceptions import JobCategoryNotFoundError
 from .schemas import (
     TalentValueUpdate,
     JobTalentValueUpdate,
+    JobCategoriesWithTalentValuesResponse,
     CompanyTalentValueResponse,
     JobTalentValueResponse,
     AdminTalentValueResponse,
     AdminJobTalentValueResponse,
 )
 from .service import (
+    get_job_categories_with_talent_values,
     get_company_talent_values,
     get_job_talent_values,
     update_company_talent_values,
@@ -28,6 +30,21 @@ router = APIRouter(tags=["Talent Values"])
 
 
 # --- 공개 API ---
+
+@router.get("/companies/{company_id}/job-categories", response_model=JobCategoriesWithTalentValuesResponse)
+def get_job_categories_with_talent_values_list(
+    company_id: int,
+    db: Session = Depends(get_db),
+):
+    """기업별 인재상 보유 직군 목록 조회 (공개)"""
+    try:
+        return get_job_categories_with_talent_values(db, company_id)
+    except CompanyNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="기업을 찾을 수 없습니다",
+        )
+
 
 @router.get("/companies/{company_id}/talent-values", response_model=CompanyTalentValueResponse)
 def get_company_talent(

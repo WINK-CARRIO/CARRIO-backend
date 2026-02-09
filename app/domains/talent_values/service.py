@@ -45,6 +45,31 @@ def _get_job_talent_or_raise(db: Session, company_id: int, job_category_id: int)
     return talent
 
 
+# 기업별 인재상 보유 직군 목록 조회
+def get_job_categories_with_talent_values(db: Session, company_id: int) -> dict:
+    company = _get_company_or_raise(db, company_id)
+
+    talents = db.query(CompanyTalentValue, JobCategory).join(
+        JobCategory, CompanyTalentValue.job_category_id == JobCategory.id
+    ).filter(
+        CompanyTalentValue.company_id == company_id,
+        CompanyTalentValue.scope == "job_category",
+    ).all()
+
+    return {
+        "company_id": company.id,
+        "company_name": company.name,
+        "job_categories": [
+            {
+                "job_category_id": job_category.id,
+                "job_category_name": job_category.name,
+                "extracted_at": talent.extracted_at,
+            }
+            for talent, job_category in talents
+        ],
+    }
+
+
 # 전사 인재상 조회
 def get_company_talent_values(db: Session, company_id: int) -> dict:
     company = _get_company_or_raise(db, company_id)
