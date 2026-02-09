@@ -103,7 +103,7 @@ def get_or_create_kakao_user(db: Session, kakao_user: dict) -> User:
             raise EmailAlreadyExistsError()
 
     # 관리자 검증
-    role = "admin" if kakao_user.email in settings.INITIAL_ADMIN_EMAILS else "user"
+    role = "admin" if kakao_user["email"] in settings.INITIAL_ADMIN_EMAILS else "user"
 
     # 3.신규 카카오 유저 생성
     user = User(
