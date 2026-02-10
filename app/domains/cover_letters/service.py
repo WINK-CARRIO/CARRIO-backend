@@ -91,28 +91,29 @@ def _save_cover_letter_result(
     """생성 결과 파싱하고 DB 저장"""
 
     final_items = result.get("final_result", [])
-    question_data = []
-    content_data = []
+    items_data = []
 
     for req_q in request.questions:
-        question_data.append({
+        question_obj = {
             "content": req_q.content,
             "min_length": req_q.min_length,
             "max_length": req_q.max_length
-        })
+        }
 
         matched_item = next((item for item in final_items if item["question"] == req_q.content), None)
 
         if matched_item:
-            content_data.append({
+            answer_obj = {
                 "content": matched_item["answer"],
                 "length": len(matched_item["answer"]),
                 "guide_comments": matched_item["guide_comments"]
-            })
+            }
         else:
-            content_data.append({
+            answer_obj = {
                 "content": "", "length": 0, "guide_comments": ["생성 실패"]
-            })
+            }
+
+        items_data.append({"question": question_obj, "answer": answer_obj})
 
     generation_metadata = {
         "quality_report": result.get("quality_report", {}),
@@ -124,8 +125,7 @@ def _save_cover_letter_result(
         user_spec_id=user_spec_id,
         company_id=request.company_id,
         job_category_id=request.job_category_id,
-        question=question_data,
-        content=content_data,
+        items=items_data,
         status="completed",
         generation_metadata=generation_metadata
     )
@@ -376,11 +376,11 @@ def _build_cover_letter_response(
 ) -> CoverLetterResponse:
     """CoverLetterResponse 생성 헬퍼"""
     item_responses = []
-    questions = cover_letter.question or []
-    contents = cover_letter.content or []
+    items = cover_letter.items or []
 
-    for i, q in enumerate(questions):
-        answer_data = contents[i] if i < len(contents) else {}
+    for item in items:
+        q = item.get("question", {})
+        a = item.get("answer", {})
 
         item_responses.append(CoverLetterItemResponse(
             question=QuestionResponse(
@@ -389,9 +389,9 @@ def _build_cover_letter_response(
                 max_length=q.get("max_length", 700)
             ),
             answer=AnswerResponse(
-                content=answer_data.get("content", ""),
-                length=answer_data.get("length", 0),
-                guide_comments=answer_data.get("guide_comments", [])
+                content=a.get("content", ""),
+                length=a.get("length", 0),
+                guide_comments=a.get("guide_comments", [])
             )
         ))
 

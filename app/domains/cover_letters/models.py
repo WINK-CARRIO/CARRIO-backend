@@ -14,10 +14,8 @@ class CoverLetter(Base):
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     job_category_id = Column(Integer, ForeignKey("job_categories.id", ondelete="RESTRICT"), nullable=True)
 
-    # [{ "content": "...", "min_length": 500, "max_length": 700 }, ...]
-    question = Column(JSONB, nullable=False)
-    # [{ "content": "...", "length": 650, "guide_comments": [...] }, ...]
-    content = Column(JSONB)
+    # [{ "question": {...}, "answer": {...} }, ...]
+    items = Column(JSONB, nullable=False)
 
     status = Column(String(50), default="pending")
     generation_metadata = Column(JSONB) # 품질 평가용
