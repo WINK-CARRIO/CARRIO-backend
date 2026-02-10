@@ -13,6 +13,7 @@ from app.shared.database import Base
 from app.domains.users.models import User, UserSpec
 from app.domains.companies.models import Company
 from app.domains.job_categories.models import JobCategory
+from app.domains.talent_values.models import CompanyTalentValue
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
