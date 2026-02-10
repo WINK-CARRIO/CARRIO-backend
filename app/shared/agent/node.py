@@ -62,7 +62,8 @@ async def analyze_company_dna_node(state: ExtractionState) -> Dict[str, Any]:
     company_dna = await analyzer.extract_company_dna(
         company_name=state["company_name"],
         search_results=state["search_results"],
-        scraped_contents=state["scraped_contents"]
+        scraped_contents=state["scraped_contents"],
+        job_category=state.get("job_category")
     )
     return {"company_dna": company_dna}
 
