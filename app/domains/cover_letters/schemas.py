@@ -19,6 +19,22 @@ class CoverLetterCreateRequest(BaseModel):
     questions: List[QuestionInput] = Field(..., min_length=1, description="질문 목록")
 
 
+class AnswerUpdateInput(BaseModel):
+    """답변 수정 입력"""
+    content: str = Field(..., description="수정된 답변 내용")
+
+
+class CoverLetterItemUpdateInput(BaseModel):
+    """자소서 항목 수정 입력"""
+    question: QuestionInput = Field(..., description="질문 (매칭용)")
+    answer: AnswerUpdateInput = Field(..., description="수정된 답변")
+
+
+class CoverLetterUpdateRequest(BaseModel):
+    """자소서 수정 요청"""
+    items: List[CoverLetterItemUpdateInput] = Field(..., min_length=1, description="수정된 항목 목록")
+
+
 # ========== 응답 스키마 ==========
 
 class QuestionResponse(BaseModel):

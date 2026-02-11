@@ -3,6 +3,7 @@ from functools import partial
 from typing import Optional, Dict, Any
 
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.domains.companies.models import Company
 from app.domains.job_categories.models import JobCategory
@@ -20,6 +21,7 @@ from .exceptions import (
 from .models import CoverLetter
 from .schemas import (
     CoverLetterCreateRequest,
+    CoverLetterUpdateRequest,
     CoverLetterResponse,
     CoverLetterListResponse,
     CoverLetterListItem,
@@ -346,6 +348,66 @@ def get_cover_letter_detail(
     return CoverLetterDetailResponse(
         cover_letter=cover_letter_response,
         matching_analysis=matching_analysis
+    )
+
+
+def update_cover_letter(
+    db: Session,
+    user: User,
+    cover_letter_id: int,
+    request: CoverLetterUpdateRequest
+) -> CoverLetterResponse:
+    """자소서 수정"""
+    cover_letter = db.query(CoverLetter).filter(
+        CoverLetter.id == cover_letter_id
+    ).first()
+
+    if not cover_letter:
+        raise CoverLetterNotFoundException()
+
+    if cover_letter.user_id != user.id:
+        raise CoverLetterForbiddenException()
+
+    # 기존 items JSONB 업데이트
+    existing_items = cover_letter.items or []
+    
+    # request.items를 순회하며 question.content로 매칭하여 answer.content 업데이트
+    for update_item in request.items:
+        question_content = update_item.question.content
+        
+        # 기존 items에서 question.content가 일치하는 항목 찾기
+        for existing_item in existing_items:
+            if existing_item.get("question", {}).get("content") == question_content:
+                # answer.content 업데이트
+                existing_item["answer"]["content"] = update_item.answer.content
+                # answer.length 재계산
+                existing_item["answer"]["length"] = len(update_item.answer.content)
+                # guide_comments는 기존 값 유지
+                break
+    
+    # JSONB in-place 수정이므로 flag_modified 필수
+    cover_letter.items = existing_items
+    flag_modified(cover_letter, "items")
+    
+    db.commit()
+    db.refresh(cover_letter)
+
+    # 응답 생성
+    company = db.query(Company).filter(Company.id == cover_letter.company_id).first()
+    company_name = company.name if company else "Unknown"
+
+    job_category_name = None
+    if cover_letter.job_category_id:
+        job_category = db.query(JobCategory).filter(
+            JobCategory.id == cover_letter.job_category_id
+        ).first()
+        if job_category:
+            job_category_name = job_category.name
+
+    return _build_cover_letter_response(
+        cover_letter=cover_letter,
+        company_name=company_name,
+        job_category_name=job_category_name
     )
 
 
