@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     KAKAO_CLIENT_SECRET: Optional[str] = "dev-client-secret" #TODO 하드코딩됨 추후 변경
 
     # 초기 관리자
-    INITIAL_ADMIN_EMAILS: ClassVar[List[str]] = ["gain3004@gmail.com"]
+    INITIAL_ADMIN_EMAILS: List[str] = []
 
-    # JWT
+# JWT
     SECRET_KEY: Optional[str] = "dev-secret-key-change-in-production" #TODO 하드코딩됨 추후 변경
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24시간
