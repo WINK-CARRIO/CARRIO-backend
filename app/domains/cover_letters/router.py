@@ -6,15 +6,16 @@ from app.domains.users.models import User
 from app.domains.auth.dependencies import get_current_user
 from .schemas import (
     CoverLetterCreateRequest,
+    CoverLetterUpdateRequest,
     CoverLetterResponse,
     CoverLetterListResponse,
     CoverLetterDetailResponse,
-    CoverLetterDeleteResponse,
 )
 from .service import (
     create_cover_letter,
     get_cover_letters,
     get_cover_letter_detail,
+    update_cover_letter,
     delete_cover_letter,
 )
 from .exceptions import (
@@ -87,7 +88,30 @@ def get_cover_letter_detail_api(
         )
 
 
-@router.delete("/{cover_letter_id}", response_model=CoverLetterDeleteResponse)
+@router.put("/{cover_letter_id}", response_model=CoverLetterResponse)
+def update_cover_letter_api(
+    cover_letter_id: int,
+    request: CoverLetterUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """자소서 수정 - 본인 자소서만 수정 가능"""
+    try:
+        return update_cover_letter(db, current_user, cover_letter_id, request)
+
+    except CoverLetterNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="자소서를 찾을 수 없습니다"
+        )
+    except CoverLetterForbiddenException:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 자소서에 대한 접근 권한이 없습니다"
+        )
+
+
+@router.delete("/{cover_letter_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_cover_letter_api(
     cover_letter_id: int,
     current_user: User = Depends(get_current_user),
@@ -96,7 +120,7 @@ def delete_cover_letter_api(
     """자소서 삭제"""
     try:
         delete_cover_letter(db, current_user, cover_letter_id)
-        return CoverLetterDeleteResponse()
+        return None
 
     except CoverLetterNotFoundException:
         raise HTTPException(
