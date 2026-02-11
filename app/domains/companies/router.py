@@ -75,7 +75,7 @@ def update(
         )
 
 
-@router.delete("/admin/companies/{company_id}")
+@router.delete("/admin/companies/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(
     company_id: int,
     db: Session = Depends(get_db),
@@ -83,7 +83,6 @@ def delete(
 ):
     try:
         delete_company(db, company_id)
-        return {"message": "기업이 삭제되었습니다"}
     except CompanyNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -222,7 +222,7 @@ def update_job_talent(
         )
 
 
-@router.delete("/admin/companies/{company_id}/talent-values")
+@router.delete("/admin/companies/{company_id}/talent-values", status_code=status.HTTP_204_NO_CONTENT)
 def delete_company_talent(
     company_id: int,
     db: Session = Depends(get_db),
@@ -231,7 +231,6 @@ def delete_company_talent(
     """전사 인재상 삭제 (Admin)"""
     try:
         delete_company_talent_values(db, company_id)
-        return {"message": "전사 인재상이 삭제되었습니다"}
     except CompanyNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -246,6 +245,7 @@ def delete_company_talent(
 
 @router.delete(
     "/admin/companies/{company_id}/job-categories/{job_category_id}/talent-values",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_job_talent(
     company_id: int,
@@ -256,7 +256,6 @@ def delete_job_talent(
     """직무 인재상 삭제 (Admin)"""
     try:
         delete_job_talent_values(db, company_id, job_category_id)
-        return {"message": "직무 인재상이 삭제되었습니다"}
     except CompanyNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
