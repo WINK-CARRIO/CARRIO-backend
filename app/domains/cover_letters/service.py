@@ -30,6 +30,8 @@ from .schemas import (
     QuestionResponse,
     AnswerResponse,
 )
+from ..job_categories.exceptions import JobCategoryNotFoundError
+
 
 def _fetch_pipeline_data_sync(db: Session, user_id: int, company_id: int, job_category_id: Optional[int]):
     """
@@ -47,8 +49,9 @@ def _fetch_pipeline_data_sync(db: Session, user_id: int, company_id: int, job_ca
     job_category_name = None
     if job_category_id:
         job_category = db.query(JobCategory).filter(JobCategory.id == job_category_id).first()
-        if job_category:
-            job_category_name = job_category.name
+        if not job_category:
+            raise JobCategoryNotFoundError()
+        job_category_name = job_category.name
 
     # 있는 경우만 찾아 쓰고 없는 경우는 밑에 별도 생성
     company_dna = None

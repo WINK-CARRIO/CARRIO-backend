@@ -24,6 +24,7 @@ from .exceptions import (
     CoverLetterGenerationFailedException,
     CompanyNotFoundException
 )
+from ..job_categories.exceptions import JobCategoryNotFoundError
 
 router = APIRouter(prefix="/cover-letters", tags=["Cover Letters"])
 
@@ -42,6 +43,11 @@ async def create_cover_letter_api(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="기업을 찾을 수 없습니다"
+        )
+    except JobCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="직군을 찾을 수 없습니다"
         )
     except CoverLetterGenerationFailedException as e:
         raise HTTPException(
