@@ -22,9 +22,9 @@ class AgentSettings(BaseSettings):
     FIRECRAWL_API_KEY: Optional[str] = None
 
     # 모델 설정
-    GPT_MODEL: str = "gpt-4o"
+    GPT_MODEL: str = "gpt-5.1"   # 변경 가능 (https://developers.openai.com/api/docs/models 참고)
     GPT_MINI_MODEL: str = "gpt-4o-mini"
-    CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
+    CLAUDE_MODEL: str = "claude-sonnet-4-5-20250929"  # 변경 가능 (https://platform.claude.com/docs/en/about-claude/models/overview 참고)
 
     # 검색 설정
     TAVILY_MAX_RESULTS: int = 5
