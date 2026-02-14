@@ -26,14 +26,23 @@ class Education(BaseModel):
     model_config = ConfigDict(extra="allow")  # 추가 필드 허용
 
 
+class Certification(BaseModel):
+    """자격증 정보"""
+    name: str  # 필수: 자격증명
+    acquired_date: Optional[str] = None  # 취득 날짜 (YYYY-MM 또는 YYYY)
+    expiry_date: Optional[str] = None    # 유효 기간 만료일 (YYYY-MM 또는 YYYY)
+
+    model_config = ConfigDict(extra="allow")  # 추가 필드 허용
+
+
 class StructuredData(BaseModel):
     """정형 데이터 (구조화된 검증)"""
     education: Optional[Education] = None
     skills: Optional[List[str]] = None
-    certifications: Optional[List[str]] = None
+    certifications: Optional[List[Certification]] = None  # 자격증 객체 리스트
     awards: Optional[List[str]] = None
     language_scores: Optional[List[Dict[str, Any]]] = None  # 토익, 토플 등
-    
+
     model_config = ConfigDict(extra="allow")  # 추가 필드 허용
 
 
