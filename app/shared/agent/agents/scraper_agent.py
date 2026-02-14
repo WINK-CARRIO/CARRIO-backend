@@ -41,7 +41,8 @@ class ScraperAgent:
 
         system_prompt = f"""당신은 웹 리서치 전문가입니다.
 검색 결과 중에서 자소서 작성(기업 분석)에 가장 유용한 URL을 최대 {max_urls}개 선별하세요.
-우선순위: 공식 홈페이지(인재상, 소개), 기술 블로그, 최신 인터뷰 기사."""
+우선순위: 공식 홈페이지(인재상, 소개), 기술 블로그, 최신 인터뷰 기사.
+제약사항(중요): pdf 문서는 제외할 것."""
 
         try:
             result: TargetUrls = await self.url_selector.ainvoke([

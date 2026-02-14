@@ -86,9 +86,12 @@ class ResearcherAgent:
 
                 if isinstance(results, list):
                     for result in results[:max_results_per_query]:
+                        raw_url = result.get("url")
+                        # 혹시나 앞에 공백 있으면 https 형식 아니라고 에러 뜨는 것 대비
+                        clean_url = (raw_url or "").strip()
                         all_results.append({
                             "query": query,
-                            "url": result.get("url"),
+                            "url": clean_url,
                             "title": result.get("title", ""),
                             "content": result.get("content", ""),
                             "score": result.get("score", 0)
