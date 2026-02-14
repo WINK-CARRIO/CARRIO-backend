@@ -38,10 +38,11 @@ class StructuredData(BaseModel):
 
 class Experience(BaseModel):
     """경험 정보 (최소 필드만 정의, 나머지는 자유롭게 추가 가능)"""
+    type: Optional[str] = None  # 프론트엔드에서 자유롭게 정의
     title: str  # 필수
     description: str  # 필수
     period: Optional[str] = None
-    
+
     model_config = ConfigDict(extra="allow")  # role, achievements 등 추가 필드 허용
 
 
