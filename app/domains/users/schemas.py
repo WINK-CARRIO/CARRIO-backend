@@ -19,9 +19,10 @@ class Education(BaseModel):
     """학력 정보"""
     school: Optional[str] = None
     major: Optional[str] = None
-    grad_year: Optional[int] = None
+    admission_year: Optional[int] = None  # 입학 년도
+    grad_year: Optional[int] = None       # 졸업 년도
     gpa: Optional[float] = None
-    
+
     model_config = ConfigDict(extra="allow")  # 추가 필드 허용
 
 
