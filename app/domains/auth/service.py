@@ -1,4 +1,3 @@
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from typing import Optional
@@ -46,7 +45,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User | None:
+def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
