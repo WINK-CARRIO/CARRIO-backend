@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -7,11 +9,11 @@ from app.shared.database import get_db
 from app.domains.users.models import User
 from app.config import settings
 
-http_bearer = HTTPBearer()
+http_bearer = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
         db: Session = Depends(get_db)
 ) -> User:
     credentials_exception = HTTPException(
@@ -19,6 +21,9 @@ def get_current_user(
         detail="인증 정보가 유효하지 않습니다",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if credentials is None:
+        raise credentials_exception
 
     token = credentials.credentials
     try:
@@ -30,10 +35,10 @@ def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+        user = db.query(User).filter(User.id == int(user_id)).first()
+    except (JWTError, ValueError):
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise credentials_exception
 
