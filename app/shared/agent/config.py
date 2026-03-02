@@ -31,7 +31,7 @@ class AgentSettings(BaseSettings):
     TAVILY_SEARCH_DEPTH: str = "advanced"  # "basic" or "advanced"
 
     # 스크래핑 설정
-    SCRAPE_MAX_CHARS: int = 5000
+    SCRAPE_MAX_CHARS: int = 10000
     SCRAPE_TIMEOUT: int = 30
 
     class Config:
