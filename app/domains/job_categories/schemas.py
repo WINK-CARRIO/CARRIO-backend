@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class JobCategoryResponse(BaseModel):
@@ -12,6 +12,11 @@ class JobCategoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class JobCategoryListResponse(BaseModel):
+    """직군 목록 응답 래핑"""
+    job_categories: List[JobCategoryResponse]
 
 
 class JobCategoryCreate(BaseModel):

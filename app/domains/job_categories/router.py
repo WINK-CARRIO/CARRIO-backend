@@ -1,25 +1,23 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.shared.database import get_db
-from app.domains.auth.dependencies import get_current_user, get_admin_user
+from app.domains.auth.dependencies import get_admin_user
 from app.domains.users.models import User
-from .schemas import JobCategoryCreate, JobCategoryUpdate, JobCategoryResponse
+from .schemas import JobCategoryCreate, JobCategoryUpdate, JobCategoryResponse, JobCategoryListResponse
 from .service import create_job_category, get_job_categories, update_job_category, delete_job_category
 from .exceptions import JobCategoryNotFoundError, JobCategoryDuplicateError, JobCategoryInUseError
 
 router = APIRouter(tags=["Job Categories"])
 
 
-@router.get("/job-categories", response_model=List[JobCategoryResponse])
+@router.get("/job-categories", response_model=JobCategoryListResponse)
 def list_all(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """직군 목록 조회 (이름순 정렬)"""
-    return get_job_categories(db)
+    """직군 목록 조회 (이름순 정렬, 공개)"""
+    categories = get_job_categories(db)
+    return {"job_categories": categories}
 
 
 @router.post("/admin/job-categories", response_model=JobCategoryResponse, status_code=status.HTTP_201_CREATED)
