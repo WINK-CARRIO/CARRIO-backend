@@ -91,9 +91,10 @@ class ScraperAgent:
 
                     data = response.json()
                     if data.get("success"):
+                        markdown = data["data"].get("markdown", "")
                         scraped_results.append({
                             "url": url,
-                            "content": data["data"].get("markdown", ""),
+                            "content": markdown[:agent_settings.SCRAPE_MAX_CHARS],
                             "metadata": data["data"].get("metadata", {})
                         })
                 except Exception as e:
