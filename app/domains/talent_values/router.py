@@ -106,7 +106,8 @@ def get_job_talent(
 
 @router.post(
     "/admin/companies/{company_id}/extract-talent-values",
-    response_model=CompanyTalentValueResponse
+    response_model=CompanyTalentValueResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 async def extract_company_talent(
     company_id: int,
@@ -137,6 +138,7 @@ async def extract_company_talent(
 @router.post(
     "/admin/companies/{company_id}/job-categories/{job_category_id}/extract-talent-values",
     response_model=JobTalentValueResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 async def extract_job_talent(
     company_id: int,
