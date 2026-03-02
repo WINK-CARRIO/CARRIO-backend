@@ -1,20 +1,29 @@
-# 자소서 에이전트 백엔드
+# CARRIO Backend
 
-## 🚀 실행 방법
+> 기업 DNA 기반 AI 자소서 생성 서비스
 
-### 1. 가상환경 설정
+---
+
+## 빠른 시작
+
+### 1. 저장소 클론
 ```bash
-cd backend
-python -m venv venv
+git clone https://github.com/WINK-CARRIO/CARRIO-backend.git
+cd CARRIO-backend
+```
+
+### 2. 가상환경 설정
+```bash
+python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 ```
 
-### 2. 패키지 설치
+### 3. 패키지 설치
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 환경 변수 설정
+### 4. 환경 변수 설정
 ```bash
 cp .env.example .env
 ```
@@ -34,13 +43,12 @@ KAKAO_CLIENT_SECRET=실제시크릿키
 SECRET_KEY=랜덤한-32자-이상의-시크릿-키-생성
 ```
 
-**API 키 발급 방법:**
+**API 키 발급:**
 - **OpenAI**: https://platform.openai.com/api-keys
-- **Kakao**: https://developers.kakao.com → 애플리케이션 추가
-- **Anthropic (선택)**: https://console.anthropic.com
-- **Tavily (선택)**: https://tavily.com
+- **Kakao**: https://developers.kakao.com
+- **Anthropic** (선택): https://console.anthropic.com
 
-### 4. 데이터베이스 실행 (Docker Compose)
+### 5. 데이터베이스 실행
 ```bash
 # PostgreSQL + pgvector 실행
 docker-compose up -d
@@ -52,103 +60,51 @@ docker-compose ps
 docker-compose logs -f postgres
 ```
 
-### 5. 스키마 적용 (최초 1회)
+### 6. 데이터베이스 마이그레이션
 ```bash
-# DB 컨테이너 안에서 실행
-docker-compose exec postgres psql -U postgres -d coverletter -c "CREATE EXTENSION IF NOT EXISTS vector;"
-
-# 스키마 적용
-docker-compose exec -T postgres psql -U postgres -d coverletter < ../docs/database_schema.sql
+# Alembic으로 DB 스키마 생성
+alembic upgrade head
 ```
 
-### 5. 서버 실행
+> **참고**: Alembic은 Git처럼 DB 스키마를 버전 관리합니다.
+> 자세한 사용법은 [ALEMBIC_GUIDE.md](./ALEMBIC_GUIDE.md)를 참고하세요.
+
+### 7. 서버 실행
 ```bash
+# venv 변경 감지 제외하고 실행 (권장)
+uvicorn app.main:app --reload --reload-exclude 'venv/*'
+
+# 또는 일반 실행
 uvicorn app.main:app --reload
 ```
 
-서버 실행 후: http://localhost:8000/docs (Swagger UI)
+> **참고**: DB 테이블은 Alembic 마이그레이션으로 관리됩니다.
+> pgvector 확장은 Docker 이미지에 포함되어 있습니다.
 
-## 👥 팀원 세팅 가이드
-
-### 첫 세팅 (클론 후)
-
-```bash
-# 1. 저장소 클론
-git clone <repo-url>
-cd backend
-
-# 2. 가상환경 생성
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 3. 패키지 설치
-pip install -r requirements.txt
-
-# 4. 환경변수 복사 및 수정
-cp .env.example .env
-# .env 파일 열어서 OPENAI_API_KEY 등 수정
-
-# 5. Docker 실행
-docker-compose up -d
-
-# 6. 데이터베이스 확인
-docker-compose exec postgres psql -U postgres -c "\l"
-
-# 7. 서버 실행
-uvicorn app.main:app --reload
-
-# 8. 테스트
-curl http://localhost:8000/health
-```
-
-### GUI 툴 설치 (선택)
-
-**TablePlus (Mac 추천)**:
-```bash
-brew install --cask tableplus
-```
-연결 정보:
-- Host: `localhost`
-- Port: `5432`
-- User: `postgres`
-- Password: `postgres123`
-- Database: `coverletter`
-
-**DBeaver (Windows/Linux 추천)**:
-```bash
-brew install --cask dbeaver-community
-```
+**서버 접속:**
+- Health Check: http://localhost:8000/health
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 ---
 
-## 📞 도움말
-
-문제 발생 시:
-1. 위 트러블슈팅 섹션 확인
-2. `docker-compose logs` 로그 확인
-3. 팀 채팅방에 에러 메시지 공유
-
----
-
-## 📂 프로젝트 구조
+## 프로젝트 구조
 
 ```
-backend/
+CARRIO-backend/
 ├── app/
-│   ├── main.py              # FastAPI 앱 진입점
+│   ├── main.py              # FastAPI 진입점
 │   ├── config.py            # 환경 설정
-│   ├── database.py          # DB 연결
 │   ├── shared/              # 공통 모듈
-│   │   ├── schemas.py       # 공통 스키마 (CurrentUser)
-│   │   ├── auth.py          # 인증 (Mock → 실제 구현)
-│   │   ├── database/        # pgvector 검색
-│   │   ├── oauth/           # 카카오 OAuth
-│   │   └── llm/             # OpenAI 클라이언트
+│   │   └── database/        # DB 연결 설정
 │   └── domains/             # 도메인별 폴더
+│       ├── auth/            # 인증 (로그인, 카카오 OAuth)
 │       ├── users/           # 사용자 관리
-│       ├── companies/       # 기업 정보 관리
-│       ├── cover_letters/   # 자소서 생성
-│       └── agents/          # AI 에이전트
+│       ├── companies/       # 기업 정보
+│       └── job_categories/  # 직무 카테고리
+├── alembic/                 # DB 마이그레이션
+│   └── versions/            # 마이그레이션 파일들
+├── docker-compose.yml       # PostgreSQL 설정
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -156,20 +112,46 @@ backend/
 
 ---
 
-## 🔑 환경 변수 (.env)
+## 개발 환경
 
-```env
-DATABASE_URL=postgresql://postgres:mypassword@localhost:5432/coverletter
-OPENAI_API_KEY=sk-...
-KAKAO_CLIENT_ID=...
-KAKAO_CLIENT_SECRET=...
-SECRET_KEY=your-secret-key-for-jwt
+### 필수 요구사항
+- Python 3.9+
+- Docker Desktop
+- PostgreSQL (Docker로 실행)
+- OpenAI API Key
+
+### 데이터베이스 GUI 툴 (선택)
+
+**TablePlus (Mac 추천):**
+```bash
+brew install --cask tableplus
 ```
+
+**DBeaver (Windows/Linux 추천):**
+```bash
+brew install --cask dbeaver-community
+```
+
+**연결 정보:**
+- Host: `localhost`
+- Port: `5432`
+- User: `postgres`
+- Password: `postgres123`
+- Database: `CARRIO`
 
 ---
 
-## 📝 API 문서
+## Kakao OAuth 설정
 
-서버 실행 후:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+### Redirect URI
+
+카카오 개발자 콘솔에 아래 Redirect URI를 등록해야 합니다.
+
+- Local:
+    - http://localhost:8000/api/v1/auth/kakao/callback
+
+- Production:
+    - https://api.example.com/api/v1/auth/kakao/callback
+
+Redirect URI는 정확히 일치해야 하며,
+프론트엔드 로그인 요청 시에도 동일한 URI를 사용해야 합니다.
