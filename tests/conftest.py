@@ -52,7 +52,7 @@ def test_user(db_session):
     user = User(
         email="test@example.com",
         name="Test User",
-        password="hashed_password",
+        password_hash="hashed_password",
         role="user"
     )
     db_session.add(user)

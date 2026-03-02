@@ -105,7 +105,8 @@ class TestUpdateCoverLetterService:
 
         # 검증
         assert mock_cover_letter.items[0]["answer"]["content"] == "수정된 답변 내용입니다. 더 구체적으로 작성했습니다."
-        assert mock_cover_letter.items[0]["answer"]["length"] == 29  # 한글 문자열 길이
+        expected_content = "수정된 답변 내용입니다. 더 구체적으로 작성했습니다."
+        assert mock_cover_letter.items[0]["answer"]["length"] == len(expected_content)
         assert mock_cover_letter.items[0]["answer"]["guide_comments"] == ["프로젝트 기간을 명시하면 더 구체적입니다"]
         mock_db.commit.assert_called_once()
 
