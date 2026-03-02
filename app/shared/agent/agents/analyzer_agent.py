@@ -10,11 +10,11 @@ from ..exceptions import CompanyDNAExtractionError
 from ..state import CompanyDNA  # TypedDict Import
 
 class CompanyDNAOutput(BaseModel):
-    core_values: List[str] = Field(description="기업 핵심 가치 (3개 내외)")
-    ideal_traits: List[str] = Field(description="선호하는 인재 특성 (5개 내외)")
-    keywords: List[str] = Field(description="자소서용 추천 키워드 (10개 내외)")
-    communication_tone: str = Field(description="자소서 작성 톤앤매너 가이드")
-    preferred_experiences: List[str] = Field(description="기업이 선호하는 경험 유형")
+    core_values: List[str] = Field(default_factory=list, description="기업 핵심 가치 (3개 내외)")
+    ideal_traits: List[str] = Field(default_factory=list, description="선호하는 인재 특성 (5개 내외)")
+    keywords: List[str] = Field(default_factory=list, description="자소서용 추천 키워드 (10개 내외)")
+    communication_tone: str = Field(default="", description="자소서 작성 톤앤매너 가이드")
+    preferred_experiences: List[str] = Field(default_factory=list, description="기업이 선호하는 경험 유형")
 
 class AnalyzerAgent:
     """기업 DNA 추출 에이전트"""

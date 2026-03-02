@@ -2,7 +2,7 @@
 Tavily 검색 에이전트
 기업 정보 검색을 위한 쿼리 생성 및 검색 수행
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -39,7 +39,7 @@ class ResearcherAgent:
         self,
         company_name: str,
         company_info: Dict[str, Any],
-        job_category: str = None
+        job_category: Optional[str] = None
     ) -> List[str]:
         """기업 정보 수집을 위한 검색 쿼리 생성"""
 

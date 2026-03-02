@@ -13,6 +13,10 @@ from ..exceptions import ScrapingError
 class TargetUrls(BaseModel):
     urls: List[str] = Field(description="스크래핑할 URL 리스트")
 
+def _filter_pdf_urls(urls: List[str]) -> List[str]:
+    """PDF URL 필터링 (LLM 프롬프트 + 코드 이중 방어)"""
+    return [u for u in urls if not u.lower().rstrip('/').endswith('.pdf')]
+
 class ScraperAgent:
     """웹 스크래핑 에이전트"""
 
@@ -35,7 +39,7 @@ class ScraperAgent:
             return []
 
         results_summary = "\n".join([
-            f"{i+1}. [{res.get('title')}]({res.get('url')}) - {res.get('content')[:100]}..."
+            f"{i+1}. [{res.get('title')}]({res.get('url')}) - {(res.get('content') or '')[:100]}..."
             for i, res in enumerate(search_results[:15]) # 상위 15개만 분석 (변경 가능)
         ])
 
@@ -49,10 +53,10 @@ class ScraperAgent:
                 ("system", system_prompt),
                 ("user", f"검색 결과:\n{results_summary}")
             ])
-            return result.urls[:max_urls]
+            return _filter_pdf_urls(result.urls)[:max_urls]
         except Exception:
             # 실패 시 상위 url 개수대로 그대로 반환
-            return [r["url"] for r in search_results[:max_urls] if r.get("url")]
+            return _filter_pdf_urls([r["url"] for r in search_results[:max_urls] if r.get("url")])
 
     async def scrape_with_firecrawl(
         self,
@@ -69,14 +73,15 @@ class ScraperAgent:
             for url in urls:
                 try:
                     response = await client.post(
-                        "[https://api.firecrawl.dev/v0/scrape](https://api.firecrawl.dev/v0/scrape)",
+                        "https://api.firecrawl.dev/v1/scrape",
                         headers={
                             "Authorization": f"Bearer {agent_settings.FIRECRAWL_API_KEY}",
                             "Content-Type": "application/json"
                         },
                         json={
                             "url": url,
-                            "pageOptions": {"onlyMainContent": True}
+                            "formats": ["markdown"],
+                            "onlyMainContent": True
                         }
                     )
 
@@ -88,7 +93,7 @@ class ScraperAgent:
                     if data.get("success"):
                         scraped_results.append({
                             "url": url,
-                            "content": data["data"].get("content", ""),
+                            "content": data["data"].get("markdown", ""),
                             "metadata": data["data"].get("metadata", {})
                         })
                 except Exception as e:
