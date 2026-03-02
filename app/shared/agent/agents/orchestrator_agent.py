@@ -10,6 +10,7 @@ from ..exceptions import CoverLetterGenerationError
 from ..state import CompanyDNA, MatchingStrategy, GeneratedAnswer, QuestionInfo, QualityReport, FinalItem
 
 class FinalItemModel(BaseModel):
+    question_index: int = Field(description="질문 번호 (1부터 시작, 입력 순서 그대로)")
     question: str
     answer: str
     guide_comments: List[str] = Field(
@@ -77,8 +78,9 @@ class OrchestratorAgent:
 
 **[필수 출력 형식 준수]**:
 1. 반드시 `final_items` 리스트와 `quality_report` 객체 두 가지를 모두 포함해야 합니다.
-2. `final_items`는 JSON 문자열이 아닌 **실제 객체 리스트(List of Objects)**여야 합니다. 
+2. `final_items`는 JSON 문자열이 아닌 **실제 객체 리스트(List of Objects)**여야 합니다.
 3. 절대 Markdown Code Block(```json 등)을 사용하지 마세요.
+4. `final_items`의 각 항목에 반드시 `question_index`를 포함하세요. [질문 1]이면 `question_index: 1`, [질문 2]이면 `question_index: 2`입니다.
 
 **[가이드 코멘트(guide_comments) 작성 규칙]**:
 1. 절대로 작성된 내용의 요약이나 장점을 나열하지 마세요.
@@ -101,6 +103,7 @@ class OrchestratorAgent:
 
             final_result: List[FinalItem] = [
                 {
+                    "question_index": item.question_index,
                     "question": item.question,
                     "answer": item.answer,
                     "guide_comments": item.guide_comments

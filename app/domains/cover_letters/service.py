@@ -108,14 +108,22 @@ def _save_cover_letter_result(
     final_items = result.get("final_result", [])
     items_data = []
 
-    for req_q in request.questions:
+    for i, req_q in enumerate(request.questions):
         question_obj = {
             "content": req_q.content,
             "min_length": req_q.min_length,
             "max_length": req_q.max_length
         }
 
-        matched_item = next((item for item in final_items if item["question"] == req_q.content), None)
+        # 1순위: question_index 기반 매칭 (1-based)
+        matched_item = next(
+            (item for item in final_items if item.get("question_index") == i + 1), None
+        )
+        # 2순위: LLM이 question_index를 빠뜨린 경우 텍스트 fallback
+        if not matched_item:
+            matched_item = next(
+                (item for item in final_items if item.get("question") == req_q.content), None
+            )
 
         if matched_item:
             answer_obj = {
