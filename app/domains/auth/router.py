@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from fastapi.responses import RedirectResponse
+
 from app.shared.database import get_db
 from app.domains.users.models import User
 from app.domains.users.schemas import UserResponse
@@ -78,18 +80,16 @@ def kakao_login():
     )
     return {"url": kakao_auth_url}
 
-@router.get("/kakao/callback", response_model=AuthResponse)
+@router.get("/kakao/callback")
 async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     kakao_user = await get_kakao_user(code)
     user = get_or_create_kakao_user(db, kakao_user)
     access_token = create_access_token({"sub": str(user.id)})
 
-    return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": user,
-        }
+    redirect_url = f"http://localhost:5173/kakao/callback?token={access_token}"
+
+    return RedirectResponse(url=redirect_url)
 
 @router.post("/logout")
 def logout(current_user: User = Depends(get_current_user)):
