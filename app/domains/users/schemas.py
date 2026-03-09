@@ -8,6 +8,8 @@ class UserResponse(BaseModel):
     email: EmailStr
     name: str
     role: str
+    oauth_provider: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

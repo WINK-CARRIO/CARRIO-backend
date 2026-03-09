@@ -1,6 +1,9 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 
+from app.domains.users.schemas import UserResponse
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
@@ -13,9 +16,15 @@ class RegisterRequest(BaseModel):
         return v
 
 
-class TokenResponse(BaseModel):
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user: UserResponse
 
 
 class UpdateMeRequest(BaseModel):

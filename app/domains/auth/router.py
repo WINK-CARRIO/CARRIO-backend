@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
-from jose import JWTError
 from sqlalchemy.orm import Session
 from app.shared.database import get_db
 from app.domains.users.models import User
 from app.domains.users.schemas import UserResponse
 from .kakao import get_kakao_user
-from .schemas import RegisterRequest, TokenResponse, UpdateMeRequest, DeleteMeRequest
+from .schemas import RegisterRequest, LoginRequest, AuthResponse, UpdateMeRequest, DeleteMeRequest
 from .service import create_user, authenticate_user, update_me, delete_me, get_or_create_kakao_user
 from .jwt import create_access_token
 from .dependencies import get_current_user
@@ -15,24 +13,28 @@ from ...config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
-    return create_user(db, body)
+    user = create_user(db, body)
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user,
+    }
 
 
-
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=AuthResponse)
 def login(
-        form: OAuth2PasswordRequestForm = Depends(),
+        body: LoginRequest,
         db: Session = Depends(get_db),
 ):
-    user = authenticate_user(db, form.username, form.password)
+    user = authenticate_user(db, body.email, body.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 올바르지 않습니다",
         )
-
 
     access_token = create_access_token(
         data={"sub": str(user.id)}
@@ -41,6 +43,7 @@ def login(
     return {
         "access_token": access_token,
         "token_type": "bearer",
+        "user": user,
     }
 
 
@@ -75,7 +78,7 @@ def kakao_login():
     )
     return {"url": kakao_auth_url}
 
-@router.get("/kakao/callback", response_model=TokenResponse)
+@router.get("/kakao/callback", response_model=AuthResponse)
 async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     kakao_user = await get_kakao_user(code)
@@ -85,6 +88,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
     return {
             "access_token": access_token,
             "token_type": "bearer",
+            "user": user,
         }
 
 @router.post("/logout")
