@@ -123,6 +123,25 @@ class StrategistAgent:
             sections.append(f"학력: {edu}")
         if skills := structured.get("skills"):
             sections.append(f"기술: {', '.join(skills)}")
+        if certs := structured.get("certifications"):
+            cert_list = []
+            for cert in certs:
+                name = cert.get("name")
+                date = cert.get("acquired_date")
+                if date:
+                    cert_list.append(f"{name}({date})")  # 취득일 있으면 포함하고 없으면 포함 안함
+                else:
+                    cert_list.append(f"{name}")
+            sections.append(f"자격증: {', '.join(cert_list)}")
+        if awards := structured.get("awards"):
+            sections.append(f"수상 내역: {', '.join(awards)}")
+        if langs := structured.get("language_scores"):
+            lang_list = []
+            for lang in langs:
+                l_name = lang.get("name") or lang.get("language", "Unknown") # Dict type이 Any라서 일단 name: score로 가져옴
+                l_score = lang.get("score") or lang.get("level", "")
+                lang_list.append(f"{l_name}: {l_score}")
+            sections.append(f"어학: {', '.join(lang_list)}")
         if exps := free_exps:
             sections.append("경험 목록:")
             for i, exp in enumerate(exps, 1):

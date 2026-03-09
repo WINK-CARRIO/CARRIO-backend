@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.domains.companies.models import Company
+from app.shared.database import SessionLocal
 from app.domains.job_categories.models import JobCategory
 from app.domains.talent_values.models import CompanyTalentValue
 from app.domains.talent_values.service import create_company_talent_value, create_job_talent_value
@@ -30,12 +31,23 @@ from .schemas import (
     QuestionResponse,
     AnswerResponse,
 )
+from ..job_categories.exceptions import JobCategoryNotFoundError
 
-def _fetch_pipeline_data_sync(db: Session, user_id: int, company_id: int, job_category_id: Optional[int]):
+
+def _fetch_pipeline_data_sync(user_id: int, company_id: int, job_category_id: Optional[int]):
     """
-    동기 방식 db 조회
-    동기로 처리할 시 요청이 더 들어오면 블로킹 되므로 동기로 db 조회하는 함수 따로 만들고 사용할 때 별도 스레드에서 실행되게 함
+    동기 방식 db 조회 (별도 스레드에서 실행)
+    SQLAlchemy Session은 thread-safe하지 않으므로 executor 내에서 새 Session 생성
     """
+    db = SessionLocal()
+    try:
+        return _fetch_pipeline_data_query(db, user_id, company_id, job_category_id)
+    finally:
+        db.close()
+
+
+def _fetch_pipeline_data_query(db: Session, user_id: int, company_id: int, job_category_id: Optional[int]):
+    """실제 DB 조회 로직"""
     user_spec = db.query(UserSpec).filter(UserSpec.user_id == user_id).first()
     if not user_spec:
         raise UserSpecNotFoundException()
@@ -47,8 +59,9 @@ def _fetch_pipeline_data_sync(db: Session, user_id: int, company_id: int, job_ca
     job_category_name = None
     if job_category_id:
         job_category = db.query(JobCategory).filter(JobCategory.id == job_category_id).first()
-        if job_category:
-            job_category_name = job_category.name
+        if not job_category:
+            raise JobCategoryNotFoundError()
+        job_category_name = job_category.name
 
     # 있는 경우만 찾아 쓰고 없는 경우는 밑에 별도 생성
     company_dna = None
@@ -95,14 +108,22 @@ def _save_cover_letter_result(
     final_items = result.get("final_result", [])
     items_data = []
 
-    for req_q in request.questions:
+    for i, req_q in enumerate(request.questions):
         question_obj = {
             "content": req_q.content,
             "min_length": req_q.min_length,
             "max_length": req_q.max_length
         }
 
-        matched_item = next((item for item in final_items if item["question"] == req_q.content), None)
+        # 1순위: question_index 기반 매칭 (1-based)
+        matched_item = next(
+            (item for item in final_items if item.get("question_index") == i + 1), None
+        )
+        # 2순위: LLM이 question_index를 빠뜨린 경우 텍스트 fallback
+        if not matched_item:
+            matched_item = next(
+                (item for item in final_items if item.get("question") == req_q.content), None
+            )
 
         if matched_item:
             answer_obj = {
@@ -184,13 +205,10 @@ async def create_cover_letter(
     """자소서 생성"""
 
     loop = asyncio.get_running_loop()
-    try:
-        data = await loop.run_in_executor(
-            None,
-            partial(_fetch_pipeline_data_sync, db, user.id, request.company_id, request.job_category_id)
-        )
-    except Exception as e:
-        raise e
+    data = await loop.run_in_executor(
+        None,
+        partial(_fetch_pipeline_data_sync, user.id, request.company_id, request.job_category_id)
+    )
 
     user_spec = data["user_spec"]
     company = data["company"]

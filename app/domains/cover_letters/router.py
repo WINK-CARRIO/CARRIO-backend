@@ -24,6 +24,8 @@ from .exceptions import (
     CoverLetterGenerationFailedException,
     CompanyNotFoundException
 )
+from ..job_categories.exceptions import JobCategoryNotFoundError
+from ..users.exceptions import UserSpecNotFoundException
 
 router = APIRouter(prefix="/cover-letters", tags=["Cover Letters"])
 
@@ -43,15 +45,27 @@ async def create_cover_letter_api(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="기업을 찾을 수 없습니다"
         )
+    except JobCategoryNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="직군을 찾을 수 없습니다"
+        )
+    except UserSpecNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자 스펙을 먼저 등록해주세요"
+        )
     except CoverLetterGenerationFailedException as e:
+        print(f"자소서 생성 실패: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="자소서 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
         )
     except Exception as e:
+        print(f"자소서 생성 오류: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"서버 내부 오류: {str(e)}"
+            detail="자소서 생성 중 오류가 발생했습니다"
         )
 
 

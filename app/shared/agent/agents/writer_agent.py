@@ -97,7 +97,7 @@ class WriterAgent:
         max_len = question_info.get('max_length') or 700
 
         sections.append(f"## 질문: {question_info['content']}")
-        sections.append(f"## 제약사항: 최소 {min_len}자 ~ 최대 {max_len}자 (반드시 준수)")
+        sections.append(f"## 제약사항: 최소 {min_len}자 ~ 최대 {max_len}자 (중요! 반드시 준수)")
 
         if target_strategy:
             sections.append(f"## 전략: {target_strategy.get('key_message')}")

@@ -17,7 +17,12 @@ engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False}
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
 
 
 @pytest.fixture(scope="function")
@@ -25,6 +30,7 @@ def db_session():
     """각 테스트마다 독립적인 DB 세션 제공"""
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
+
     try:
         yield session
     finally:
@@ -35,12 +41,13 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """FastAPI 테스트 클라이언트 제공"""
+
     def override_get_db():
         try:
             yield db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -49,13 +56,16 @@ def client(db_session):
 @pytest.fixture
 def test_user(db_session):
     """테스트용 사용자 생성"""
+
     user = User(
         email="test@example.com",
         name="Test User",
         password_hash="hashed_password",
         role="user"
     )
+
     db_session.add(user)
     db_session.commit()
     db_session.refresh(user)
+
     return user

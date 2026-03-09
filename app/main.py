@@ -8,6 +8,7 @@ from app.domains.companies import router as companies_routes
 from app.domains.job_categories import router as job_categories_routes
 from app.domains.talent_values import router as talent_values_routes
 from app.domains.cover_letters import router as cover_letters_routes
+from app.domains.auth.exception_handlers import register_auth_exception_handlers
 from app.shared.database import Base, engine
 
 # 테이블 생성은 Alembic 마이그레이션으로 관리합니다
@@ -29,11 +30,13 @@ app = FastAPI(
 # CORS 설정 (프론트엔드 개발용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  
+    allow_origins=["http://localhost:3000","http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+register_auth_exception_handlers(app)
 
 @app.get("/", response_model=HealthCheck)
 def root():

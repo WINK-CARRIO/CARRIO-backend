@@ -2,7 +2,7 @@
 Tavily 검색 에이전트
 기업 정보 검색을 위한 쿼리 생성 및 검색 수행
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -39,7 +39,7 @@ class ResearcherAgent:
         self,
         company_name: str,
         company_info: Dict[str, Any],
-        job_category: str = None
+        job_category: Optional[str] = None
     ) -> List[str]:
         """기업 정보 수집을 위한 검색 쿼리 생성"""
 
@@ -86,9 +86,12 @@ class ResearcherAgent:
 
                 if isinstance(results, list):
                     for result in results[:max_results_per_query]:
+                        raw_url = result.get("url")
+                        # 혹시나 앞에 공백 있으면 https 형식 아니라고 에러 뜨는 것 대비
+                        clean_url = (raw_url or "").strip()
                         all_results.append({
                             "query": query,
-                            "url": result.get("url"),
+                            "url": clean_url,
                             "title": result.get("title", ""),
                             "content": result.get("content", ""),
                             "score": result.get("score", 0)

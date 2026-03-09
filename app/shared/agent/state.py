@@ -55,6 +55,7 @@ class GeneratedAnswer(TypedDict):
 
 class FinalItem(TypedDict):
     """최종 완성된 항목 (OrchestratorAgent 출력)"""
+    question_index: int
     question: str
     answer: str
     guide_comments: List[str]

@@ -1,6 +1,4 @@
-from typing import Dict, Optional, Union
-
-from sqlalchemy.dialects.postgresql import Any
+from typing import Any, Dict, Optional, Union
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import func
 
