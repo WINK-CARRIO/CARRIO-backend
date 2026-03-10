@@ -1,11 +1,41 @@
-# test_cover_letters.py — 자소서 수정 API 테스트
+# test_cover_letters.py — 자소서 API 테스트
 
 import pytest
 from unittest.mock import Mock, patch
 from fastapi import HTTPException
 from app.domains.cover_letters.service import update_cover_letter
-from app.domains.cover_letters.schemas import CoverLetterUpdateRequest, CoverLetterItemUpdateInput, QuestionInput, AnswerUpdateInput
+from app.domains.cover_letters.schemas import (
+    CoverLetterUpdateRequest, CoverLetterItemUpdateInput, QuestionInput, AnswerUpdateInput,
+    CoverLetterListItem,
+)
 from app.domains.cover_letters.exceptions import CoverLetterNotFoundException, CoverLetterForbiddenException
+
+
+class TestCoverLetterListItem:
+    """CoverLetterListItem 스키마 테스트"""
+
+    def test_includes_company_logo_url(self):
+        from datetime import datetime
+        item = CoverLetterListItem(
+            id=1,
+            company_name="삼성전자",
+            company_logo_url="https://example.com/logo.png",
+            job_category_name="백엔드",
+            status="completed",
+            created_at=datetime(2026, 1, 1),
+        )
+        assert item.company_logo_url == "https://example.com/logo.png"
+
+    def test_company_logo_url_defaults_to_none(self):
+        from datetime import datetime
+        item = CoverLetterListItem(
+            id=1,
+            company_name="삼성전자",
+            job_category_name=None,
+            status="completed",
+            created_at=datetime(2026, 1, 1),
+        )
+        assert item.company_logo_url is None
 
 
 class TestUpdateCoverLetterService:
