@@ -4,6 +4,7 @@ from typing import Optional
 from app.domains.users.models import User
 from .exceptions import EmailAlreadyExistsError, PasswordRequiredError, InvalidPasswordError
 from .schemas import RegisterRequest, UpdateMeRequest
+from ...config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -24,13 +25,16 @@ def create_user(db: Session, user_create: RegisterRequest) -> User:
     if existing_user:
         raise EmailAlreadyExistsError()
 
+    # 관리자 검증
+    role = "admin" if user_create.email in settings.INITIAL_ADMIN_EMAILS else "user"
+
     # 필드 매핑
     user = User(
         email=user_create.email,
         password_hash=hashed_password,
         name=user_create.name,
         oauth_provider="email",
-        role="user",
+        role=role,
     )
 
     db.add(user)  # 이 객체를 db에 저장하겠다고 예약
@@ -97,13 +101,16 @@ def get_or_create_kakao_user(db: Session, kakao_user: dict) -> User:
         if existing_user:
             raise EmailAlreadyExistsError()
 
+    # 관리자 검증
+    role = "admin" if kakao_user["email"] in settings.INITIAL_ADMIN_EMAILS else "user"
+
     # 3.신규 카카오 유저 생성
     user = User(
         email=kakao_user["email"],
         name=kakao_user["name"],
         oauth_provider="kakao",
         oauth_id=kakao_user["oauth_id"],
-        role="user",
+        role=role,
     )
 
     db.add(user)

@@ -9,12 +9,19 @@ from .kakao import get_kakao_user
 from .schemas import RegisterRequest, LoginRequest, AuthResponse, UpdateMeRequest, DeleteMeRequest
 from .service import create_user, authenticate_user, update_me, delete_me, get_or_create_kakao_user
 from .jwt import create_access_token
-from .dependencies import get_current_user
+from .dependencies import get_current_user, get_admin_user
 from ...config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.get("/admin/users")
+def read_all_users(
+        admin: User = Depends(get_admin_user),
+        db: Session = Depends(get_db),
+):
+    return db.query(User).all()
+  
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
     user = create_user(db, body)
@@ -39,7 +46,7 @@ def login(
         )
 
     access_token = create_access_token(
-        data={"sub": str(user.id)}
+        data={"sub": str(user.id), "role": user.role}
     )
 
     return {
@@ -85,7 +92,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
 
     kakao_user = await get_kakao_user(code)
     user = get_or_create_kakao_user(db, kakao_user)
-    access_token = create_access_token({"sub": str(user.id)})
+    access_token = create_access_token({"sub": str(user.id), "role": user.role})
 
     redirect_url = f"http://localhost:5173/kakao/callback?token={access_token}"
 
