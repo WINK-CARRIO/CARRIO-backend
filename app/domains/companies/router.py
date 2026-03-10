@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.shared.database import get_db
-from app.domains.auth.dependencies import get_current_user, get_admin_user
+from app.domains.auth.dependencies import get_admin_user
 from app.domains.users.models import User
 from .schemas import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyListResponse
 from .service import create_company, get_companies, get_company, update_company, delete_company
@@ -35,7 +35,6 @@ def list_all(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     total, companies = get_companies(db, search=search, sort=sort, page=page, limit=limit)
     return CompanyListResponse(total=total, page=page, limit=limit, data=companies)
@@ -45,7 +44,6 @@ def list_all(
 def detail(
     company_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     try:
         return get_company(db, company_id)
@@ -77,7 +75,7 @@ def update(
         )
 
 
-@router.delete("/admin/companies/{company_id}")
+@router.delete("/admin/companies/{company_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(
     company_id: int,
     db: Session = Depends(get_db),
@@ -85,7 +83,6 @@ def delete(
 ):
     try:
         delete_company(db, company_id)
-        return {"message": "기업이 삭제되었습니다"}
     except CompanyNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
