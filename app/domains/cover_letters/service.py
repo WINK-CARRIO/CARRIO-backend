@@ -312,6 +312,7 @@ def get_cover_letters(
         data.append(CoverLetterListItem(
             id=cl.id,
             company_name=company.name if company else "Unknown",
+            company_logo_url=company.logo_url if company else None,
             job_category_name=job_category.name if job_category else None,
             status=cl.status,
             overall_score=overall_score,

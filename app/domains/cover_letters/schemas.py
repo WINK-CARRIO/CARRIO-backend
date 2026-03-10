@@ -77,6 +77,7 @@ class CoverLetterListItem(BaseModel):
     """자소서 목록 아이템"""
     id: int
     company_name: str
+    company_logo_url: Optional[str] = None
     job_category_name: Optional[str]
     overall_score: Optional[float] = None
     status: str

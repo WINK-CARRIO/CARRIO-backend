@@ -24,6 +24,7 @@ class Education(BaseModel):
     admission_year: Optional[int] = None  # 입학 년도
     grad_year: Optional[int] = None       # 졸업 년도
     gpa: Optional[float] = None
+    gpa_scale: Optional[float] = None  # 만점 기준 (4.5, 4.3, 4.0 등)
 
     model_config = ConfigDict(extra="allow")  # 추가 필드 허용
 
