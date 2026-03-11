@@ -3,7 +3,8 @@
 모든 답변을 조합하고 전체적인 일관성과 품질을 검증
 """
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
+from json_repair import repair_json
+from pydantic import BaseModel, Field, field_validator
 from langchain_anthropic import ChatAnthropic
 from ..config import agent_settings
 from ..exceptions import CoverLetterGenerationError
@@ -27,6 +28,14 @@ class QualityReportModel(BaseModel):
 class OrchestratorOutput(BaseModel):
     final_items: List[FinalItemModel] = Field(description="최종 완성된 자소서 항목 리스트")
     quality_report: QualityReportModel
+
+    # LLM이 리스트를 JSON 문자열로 반환하는 경우 방어
+    @field_validator("final_items", mode="before")
+    @classmethod
+    def parse_string_to_list(cls, v):
+        if isinstance(v, str):
+            return repair_json(v, return_objects=True)
+        return v
 
 class OrchestratorAgent:
     """최종 조합 및 품질 검증 에이전트"""
