@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # 초기 관리자
     INITIAL_ADMIN_EMAILS: List[str] = []
 
+    # 프론트 url
+    FRONTEND_URL: str
+
 # JWT
     SECRET_KEY: Optional[str] = "dev-secret-key-change-in-production" #TODO 하드코딩됨 추후 변경
     ALGORITHM: str = "HS256"

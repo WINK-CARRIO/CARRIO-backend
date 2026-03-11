@@ -94,7 +94,7 @@ async def kakao_callback(code: str, db: Session = Depends(get_db)):
     user = get_or_create_kakao_user(db, kakao_user)
     access_token = create_access_token({"sub": str(user.id), "role": user.role})
 
-    redirect_url = f"http://localhost:5173/kakao/callback?token={access_token}"
+    redirect_url = f"{settings.FRONTEND_URL}/kakao/callback?token={access_token}"
 
     return RedirectResponse(url=redirect_url)
 
